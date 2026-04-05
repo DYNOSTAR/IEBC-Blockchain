@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+console.log("DB PASSWORD (raw):", process.env.DB_PASSWORD);
+console.log("Type:", typeof process.env.DB_PASSWORD);
+
 const authRoutes = require('./routes/authRoutes');
 const pool = require('./config/db');
 

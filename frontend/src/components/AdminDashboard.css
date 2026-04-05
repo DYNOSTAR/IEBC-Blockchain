@@ -1,0 +1,307 @@
+/* Admin Dashboard Styles */
+
+.admin-dashboard {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #f0f9ff, #f0f4ff);
+}
+
+/* Navigation */
+.admin-nav {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-nav-container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-nav-content h1 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #111827;
+  margin: 0;
+}
+
+.admin-nav-content p {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.admin-nav-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-nav-username {
+  color: #374151;
+}
+
+.admin-logout-btn {
+  background-color: #dc2626;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-weight: 500;
+}
+
+.admin-logout-btn:hover {
+  background-color: #991b1b;
+}
+
+/* Main Content */
+.admin-content {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* Status Alert */
+.admin-status-alert {
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: white;
+  font-weight: bold;
+  font-size: 1.125rem;
+}
+
+.admin-status-alert.ongoing {
+  background-color: #16a34a;
+}
+
+.admin-status-alert.ended {
+  background-color: #4b5563;
+}
+
+/* Stats Grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.admin-stat-card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+.admin-stat-label {
+  color: #4b5563;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-stat-value {
+  font-size: 2.25rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.admin-stat-card:nth-child(1) .admin-stat-value {
+  color: #2563eb;
+}
+
+.admin-stat-card:nth-child(2) .admin-stat-value {
+  color: #16a34a;
+}
+
+.admin-stat-card:nth-child(3) .admin-stat-value {
+  color: #9333ea;
+}
+
+.admin-stat-card:nth-child(4) .admin-stat-value {
+  color: #d97706;
+}
+
+.admin-stat-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Results Section */
+.admin-results-card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.admin-results-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #111827;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+}
+
+.admin-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-result-item {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1.5rem;
+}
+
+.admin-result-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.admin-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.admin-result-name {
+  font-weight: bold;
+  color: #111827;
+}
+
+.admin-result-votes {
+  color: #2563eb;
+  font-weight: bold;
+}
+
+.admin-result-bar-container {
+  background-color: #e5e7eb;
+  border-radius: 9999px;
+  height: 2rem;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.admin-result-bar {
+  background-color: #2563eb;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.75rem;
+  color: white;
+  font-weight: bold;
+  transition: width 0.5s ease;
+}
+
+.admin-result-party {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+/* Action Cards */
+.admin-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-action-card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+.admin-action-card h3 {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #111827;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.admin-action-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.admin-end-election-btn {
+  background-color: #dc2626;
+  color: white;
+}
+
+.admin-end-election-btn:hover:not(:disabled) {
+  background-color: #991b1b;
+}
+
+.admin-end-election-btn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.admin-status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-status-item {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+/* Footer */
+.admin-footer {
+  margin-top: 3rem;
+  text-align: center;
+  color: #4b5563;
+  font-size: 0.875rem;
+  padding-bottom: 2rem;
+}
+
+.admin-footer-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.admin-footer-subtitle {
+  margin: 0.5rem 0 0 0;
+  color: #6b7280;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-nav-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .admin-stat-value {
+    font-size: 1.5rem;
+  }
+
+  .admin-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
