@@ -1,0 +1,33 @@
+{
+  "name": "iebc-blockchain",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DYNOSTAR/IEBC-Blockchain.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DYNOSTAR/IEBC-Blockchain/issues"
+  },
+  "homepage": "https://github.com/DYNOSTAR/IEBC-Blockchain#readme",
+  "dependencies": {
+    "@truffle/hdwallet-provider": "^1.7.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.20.0",
+    "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
