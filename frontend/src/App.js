@@ -5,6 +5,8 @@ import VoterLogin from './components/VoterLogin';
 import AdminLogin from './components/AdminLogin';
 import VotingDashboard from './components/VotingDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import ResultsPage from './components/ResultsPage';
+import VoterVerification from './components/VoterVerification';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -29,6 +31,7 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<VoterLogin />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/verify" element={<VoterVerification />} />
                 <Route 
                     path="/voting" 
                     element={
@@ -45,6 +48,7 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
+                <Route path="/results" element={<ResultsPage />} />
             </Routes>
         </Router>
     );

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './Login.css';
-
+import '../styles/main.css';
+import '../styles/admin-login.css';
 const AdminLogin = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({

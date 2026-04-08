@@ -1,0 +1,328 @@
+/* Voting Dashboard Specific Styles */
+.voting-dashboard {
+    min-height: 100vh;
+    background: #f7fafc;
+}
+
+.voting-header {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 20px 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.voting-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.voter-info {
+    text-align: right;
+}
+
+.voter-name {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.logout-btn {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* Progress Bar */
+.progress-container {
+    background: white;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.progress-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #4a5568;
+}
+
+.progress-bar-bg {
+    background: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    height: 8px;
+}
+
+.progress-bar-fill {
+    background: linear-gradient(90deg, #48bb78, #38a169);
+    height: 100%;
+    transition: width 0.5s ease;
+    border-radius: 10px;
+}
+
+/* Voting Container */
+.voting-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.voting-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+    animation: slideIn 0.5s ease;
+}
+
+.position-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 25px;
+    color: white;
+}
+
+.position-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+}
+
+.position-description {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+.position-counter {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.candidates-list {
+    padding: 25px;
+}
+
+.candidate-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.candidate-card:hover {
+    transform: translateX(5px);
+    border-color: #667eea;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.candidate-card.selected {
+    border-color: #48bb78;
+    background: #f0fff4;
+}
+
+.candidate-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.candidate-symbol {
+    font-size: 2rem;
+}
+
+.candidate-details h3 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    color: #1e3c72;
+}
+
+.candidate-party {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 3px;
+}
+
+.candidate-description {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.radio-indicator {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.radio-indicator.selected {
+    background: #48bb78;
+    border-color: #48bb78;
+    color: white;
+}
+
+.voting-actions {
+    padding: 20px 25px;
+    background: #f7fafc;
+    display: flex;
+    justify-content: space-between;
+}
+
+.nav-btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-btn-prev {
+    background: #cbd5e0;
+    color: #4a5568;
+}
+
+.nav-btn-prev:hover:not(:disabled) {
+    background: #a0aec0;
+}
+
+.nav-btn-next {
+    background: #4299e1;
+    color: white;
+}
+
+.nav-btn-next:hover:not(:disabled) {
+    background: #3182ce;
+    transform: translateX(3px);
+}
+
+.nav-btn-submit {
+    background: #48bb78;
+    color: white;
+}
+
+.nav-btn-submit:hover:not(:disabled) {
+    background: #38a169;
+    transform: scale(1.02);
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Success Screen */
+.success-screen {
+    text-align: center;
+    padding: 60px 40px;
+}
+
+.success-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: bounce 0.5s ease;
+}
+
+.success-title {
+    font-size: 1.8rem;
+    color: #48bb78;
+    margin-bottom: 20px;
+}
+
+.verification-code-box {
+    background: #f7fafc;
+    border: 2px dashed #cbd5e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 30px 0;
+}
+
+.code-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.code-value {
+    font-size: 2rem;
+    font-family: monospace;
+    font-weight: bold;
+    color: #4299e1;
+    letter-spacing: 2px;
+}
+
+.result-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+/* Loading State */
+.loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
