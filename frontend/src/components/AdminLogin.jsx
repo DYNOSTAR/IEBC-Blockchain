@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/main.css';
 import '../styles/admin-login.css';
+
 const AdminLogin = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ const AdminLogin = () => {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => {
         setFormData({
@@ -33,7 +35,7 @@ const AdminLogin = () => {
 
             if (response.data.success) {
                 localStorage.setItem('token', response.data.token);
-                localStorage.setItem('admin', JSON.stringify(response.data.admin));
+                localStorage.setItem('user', JSON.stringify(response.data.admin));
                 localStorage.setItem('role', 'admin');
                 
                 navigate('/admin/dashboard');
@@ -46,64 +48,189 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8">
-                <div className="text-center mb-8">
-                    <div className="text-4xl mb-3">🔐</div>
-                    <h1 className="text-2xl font-bold text-gray-800">Admin Portal</h1>
-                    <p className="text-gray-600 mt-2">IEBC Election Management System</p>
-                </div>
+        <div className="admin-login-page">
+            {/* Animated Background */}
+            <div className="admin-bg-animation">
+                <div className="bg-shape shape-1"></div>
+                <div className="bg-shape shape-2"></div>
+                <div className="bg-shape shape-3"></div>
+                <div className="bg-shape shape-4"></div>
+            </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                            placeholder="admin@iebc.or.ke"
-                            required
-                        />
-                    </div>
-
-                    <div className="mb-6">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                            placeholder="Enter your password"
-                            required
-                        />
-                    </div>
-
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-                            {error}
+            {/* Header Bar */}
+            <div className="admin-header-bar">
+                <div className="container">
+                    <div className="admin-header-content">
+                        <div className="admin-logo" onClick={() => navigate('/')}>
+                            <div className="logo-icon">🗳️</div>
+                            <div className="logo-text">
+                                <span className="logo-title">IEBC</span>
+                                <span className="logo-subtitle">Blockchain Voting System</span>
+                            </div>
                         </div>
-                    )}
+                        <button onClick={() => navigate('/')} className="back-home-btn">
+                            <span>←</span> Back to Home
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
-                    >
-                        {loading ? 'Logging in...' : 'Login to Admin Portal'}
-                    </button>
-                </form>
+            {/* Main Content */}
+            <div className="admin-login-main">
+                <div className="container">
+                    <div className="admin-login-wrapper">
+                        {/* Security Badge */}
+                        <div className="security-badge">
+                            <div className="security-icon">🔐</div>
+                            <div className="security-text">
+                                <span className="security-title">Secure Area</span>
+                                <span className="security-subtitle">Authorized Personnel Only</span>
+                            </div>
+                        </div>
 
-                <div className="mt-6 text-center">
-                    <p className="text-sm text-gray-600">
-                        Authorized IEBC personnel only
-                    </p>
+                        {/* Login Card */}
+                        <div className="admin-login-card">
+                            <div className="card-header">
+                                <div className="card-icon">👨‍💼</div>
+                                <h1>Administrator Portal</h1>
+                                <p>IEBC Election Management System</p>
+                                <div className="admin-badge">Restricted Access</div>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="admin-form">
+                                <div className="input-group">
+                                    <div className="input-icon">📧</div>
+                                    <div className="input-field">
+                                        <label>Email Address</label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            placeholder="admin@iebc.or.ke"
+                                            required
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="input-group">
+                                    <div className="input-icon">🔒</div>
+                                    <div className="input-field">
+                                        <label>Password</label>
+                                        <div className="password-wrapper">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleChange}
+                                                placeholder="Enter your password"
+                                                required
+                                            />
+                                            <button 
+                                                type="button"
+                                                className="toggle-password"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                            >
+                                                {showPassword ? "👁️" : "👁️‍🗨️"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {error && (
+                                    <div className="error-message">
+                                        <span className="error-icon">⚠️</span>
+                                        <span>{error}</span>
+                                    </div>
+                                )}
+
+                                <button 
+                                    type="submit" 
+                                    className="admin-login-btn"
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <span className="btn-loading">
+                                            <span className="spinner"></span>
+                                            Authenticating...
+                                        </span>
+                                    ) : (
+                                        <span className="btn-content">
+                                            <span>🔑</span>
+                                            Access Admin Portal
+                                            <span>→</span>
+                                        </span>
+                                    )}
+                                </button>
+
+                                <div className="form-footer">
+                                    <div className="security-check">
+                                        <div className="check-item">
+                                            <span>✓</span> SSL Encrypted
+                                        </div>
+                                        <div className="check-item">
+                                            <span>✓</span> 2FA Enabled
+                                        </div>
+                                        <div className="check-item">
+                                            <span>✓</span> Audit Logged
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div className="card-footer">
+                                <div className="info-box">
+                                    <div className="info-icon">ℹ️</div>
+                                    <div className="info-text">
+                                        <p>This portal is for IEBC officials only.</p>
+                                        <p className="info-note">Unauthorized access is prohibited and will be prosecuted.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Additional Info Cards */}
+                        <div className="info-cards">
+                            <div className="info-card">
+                                <div className="info-card-icon">🛡️</div>
+                                <h4>Blockchain Security</h4>
+                                <p>All admin actions are recorded on the blockchain audit trail</p>
+                            </div>
+                            <div className="info-card">
+                                <div className="info-card-icon">📊</div>
+                                <h4>Real-time Monitoring</h4>
+                                <p>Monitor election progress and results in real-time</p>
+                            </div>
+                            <div className="info-card">
+                                <div className="info-card-icon">🔔</div>
+                                <h4>Instant Alerts</h4>
+                                <p>Receive notifications for critical system events</p>
+                            </div>
+                        </div>
+
+                        {/* Test Credentials (for development only) */}
+                        <div className="test-credentials">
+                            <div className="test-header">
+                                <span>🔧</span>
+                                <span>Development Test Credentials</span>
+                                <span>⚠️</span>
+                            </div>
+                            <div className="test-content">
+                                <div className="test-item">
+                                    <span className="test-label">Email:</span>
+                                    <code>admin@iebc.or.ke</code>
+                                </div>
+                                <div className="test-item">
+                                    <span className="test-label">Password:</span>
+                                    <code>Admin@2027!</code>
+                                </div>
+                            </div>
+                            <div className="test-note">
+                                Remove in production environment
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

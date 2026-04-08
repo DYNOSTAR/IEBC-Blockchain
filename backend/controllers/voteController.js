@@ -1,105 +1,154 @@
-const Vote = require('../models/vote');
-const Election = require('../models/Election');
-const Voter = require('../models/Voter');
-const { votingContract, web3 } = require('../config/blockchain');
+const pool = require('../config/db');
+const { castVoteOnBlockchain, verifyVote, getElectionDetails } = require('../config/blockchain');
 
-// Cast vote on blockchain
-const castBlockchainVote = async (voterAddress, positionId, candidateId, electionId) => {
-    try {
-        // Call smart contract to record vote
-        const tx = await votingContract.methods
-            .vote(electionId, positionId, candidateId)
-            .send({ from: voterAddress, gas: 200000 });
-        
-        return tx.transactionHash;
-    } catch (error) {
-        console.error('Blockchain vote error:', error);
-        throw new Error('Failed to record vote on blockchain');
-    }
-};
-
-// Main voting controller
+// Cast vote using blockchain
 const castVote = async (req, res) => {
-    const { electionId, positionId, candidateId, voterAddress } = req.body;
-    const userId = req.user.id; // From JWT authentication
+    const { electionId, positionId, candidateId } = req.body;
+    const userId = req.user.id;
+    const voterAddress = req.user.voterAddress || '0x...'; // You'll store voter addresses
 
     try {
-        // Check if election is active
-        const activeElection = await Election.getActiveElection();
-        if (!activeElection || activeElection.id !== electionId) {
-            return res.status(400).json({ error: 'Election is not active' });
+        // Check if election is active in database
+        const electionQuery = `
+            SELECT * FROM elections 
+            WHERE id = $1 AND status = 'active'
+        `;
+        const electionResult = await pool.query(electionQuery, [electionId]);
+        
+        if (electionResult.rows.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Election is not active' 
+            });
         }
 
-        // Get voter details
-        const voter = await Voter.findByUserId(userId);
-        if (!voter) {
-            return res.status(404).json({ error: 'Voter not found' });
+        // Get voter info
+        const voterQuery = `
+            SELECT v.id as voter_id, u.national_id 
+            FROM voters v
+            JOIN users u ON v.user_id = u.id
+            WHERE v.user_id = $1
+        `;
+        const voterResult = await pool.query(voterQuery, [userId]);
+        
+        if (voterResult.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Voter not found' 
+            });
         }
+
+        const voter = voterResult.rows[0];
 
         // Check if already voted for this position
-        const alreadyVoted = await Vote.hasVoted(voter.id, electionId, positionId);
-        if (alreadyVoted) {
-            return res.status(400).json({ error: 'Already voted for this position' });
+        const checkVoteQuery = `
+            SELECT * FROM votes 
+            WHERE voter_id = $1 AND election_id = $2 AND position_id = $3
+        `;
+        const existingVote = await pool.query(checkVoteQuery, [voter.voter_id, electionId, positionId]);
+        
+        if (existingVote.rows.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Already voted for this position' 
+            });
         }
 
-        // Record vote on blockchain
-        const transactionHash = await castBlockchainVote(
-            voterAddress,
-            positionId,
-            candidateId,
-            electionId
+        // Cast vote on blockchain
+        // Note: In production, you'd get the voter's private key securely
+        const voterPrivateKey = process.env.TEST_PRIVATE_KEY; // For testing only
+        const voterEthAddress = process.env.TEST_ACCOUNT_ADDRESS;
+
+        const blockchainResult = await castVoteOnBlockchain(
+            parseInt(electionId),
+            parseInt(positionId),
+            parseInt(candidateId),
+            voterEthAddress,
+            voterPrivateKey
         );
 
-        // Record vote in local database
-        const newVote = await Vote.castVote(
-            voter.id,
+        if (!blockchainResult.success) {
+            return res.status(500).json({
+                success: false,
+                error: 'Blockchain transaction failed: ' + blockchainResult.error
+            });
+        }
+
+        // Record vote in database
+        const insertQuery = `
+            INSERT INTO votes (voter_id, election_id, position_id, candidate_id, transaction_hash, verification_code)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `;
+        const dbResult = await pool.query(insertQuery, [
+            voter.voter_id,
             electionId,
             positionId,
             candidateId,
-            transactionHash
-        );
+            blockchainResult.transactionHash,
+            blockchainResult.verificationCode
+        ]);
 
-        res.status(201).json({
+        res.json({
             success: true,
-            message: 'Vote recorded successfully',
-            vote: newVote,
-            transactionHash
+            vote: dbResult.rows[0],
+            transactionHash: blockchainResult.transactionHash,
+            verificationCode: blockchainResult.verificationCode,
+            blockNumber: blockchainResult.blockNumber
         });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        console.error('Error casting vote:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 };
 
-// Get election results
-const getResults = async (req, res) => {
-    const { electionId } = req.params;
-
+// Verify vote on blockchain
+const verifyVoteOnChain = async (req, res) => {
+    const { electionId, positionId, voterAddress } = req.body;
+    
     try {
-        // Get results from database
-        const results = await Election.getResults(parseInt(electionId));
-        
-        // Optionally verify with blockchain
-        const blockchainVerified = await verifyBlockchainResults(electionId);
+        const hasVoted = await verifyVote(electionId, positionId, voterAddress);
         
         res.json({
             success: true,
-            results,
-            blockchainVerified
+            hasVoted: hasVoted,
+            message: hasVoted ? 'Vote verified on blockchain' : 'No vote found for this position'
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error verifying vote:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 };
 
-// Verify blockchain results
-const verifyBlockchainResults = async (electionId) => {
+// Get blockchain election status
+const getBlockchainElectionStatus = async (req, res) => {
+    const { electionId } = req.params;
+    
     try {
-        const totalVotes = await votingContract.methods.getTotalVotes(electionId).call();
-        return { totalVotes: parseInt(totalVotes), verified: true };
+        const electionDetails = await getElectionDetails(parseInt(electionId));
+        
+        res.json({
+            success: true,
+            election: electionDetails
+        });
     } catch (error) {
-        return { verified: false, error: error.message };
+        console.error('Error getting election status:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 };
 
-module.exports = { castVote, getResults, verifyBlockchainResults };
+module.exports = {
+    castVote,
+    verifyVoteOnChain,
+    getBlockchainElectionStatus
+};

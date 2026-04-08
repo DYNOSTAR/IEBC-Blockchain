@@ -1,25 +1,19 @@
 const bcrypt = require('bcryptjs');
 
-// Hash password
+// Hash a password
 async function hashPassword(password) {
     const salt = await bcrypt.genSalt(10);
-    return bcrypt.hash(password, salt);
+    return await bcrypt.hash(password, salt);
 }
 
-// Generate hash for password
-async function generateHashForPassword(password) {
-    try {
-        const hashedPassword = await hashPassword(password);
-        console.log(`Password: ${password}`);
-        console.log(`Hash: ${hashedPassword}`);
-        return hashedPassword;
-    } catch (error) {
-        console.error('Error hashing password:', error);
-    }
+// Verify password
+async function verifyPassword(password, hashedPassword) {
+    return await bcrypt.compare(password, hashedPassword);
 }
 
-// Export for use
-module.exports = {
-    hashPassword,
-    generateHashForPassword
-};
+// Generate a random verification code
+function generateVerificationCode() {
+    return Math.random().toString(36).substring(2, 15).toUpperCase();
+}
+
+module.exports = { hashPassword, verifyPassword, generateVerificationCode };
