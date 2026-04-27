@@ -1,110 +1,134 @@
-const bcrypt = require('bcryptjs');
-const pool = require('../config/db');
 require('dotenv').config();
+const pool = require('../config/db');
+const bcrypt = require('bcryptjs');
 
-// Seed function
-async function seedDatabase() {
+const SALT_ROUNDS = 12;
+
+async function seed() {
+    const client = await pool.connect();
     try {
-        console.log('🌱 Starting database seeding...');
+        await client.query('BEGIN');
 
-        // Hash passwords
-        const adminPassword = await bcrypt.hash('admin123', 10);
-        const voterPassword = await bcrypt.hash('voter123', 10);
+        console.log('🌱 Seeding database...');
 
-        console.log('✓ Passwords hashed');
+        // ── Counties ────────────────────────────────────────────────────────────
+        await client.query(`
+            INSERT INTO counties (id, name) VALUES
+            (1, 'Nairobi'), (2, 'Mombasa'), (3, 'Kisumu'), (4, 'Nakuru'), (5, 'Kiambu')
+            ON CONFLICT (id) DO NOTHING
+        `);
+        console.log('✅ Counties seeded');
 
-        // Insert admin user
-        const adminUserResult = await pool.query(
-            `INSERT INTO users (email, password_hash, first_name, last_name, role)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id`,
-            ['admin@iebc.or.ke', adminPassword, 'IEBC', 'Administrator', 'admin']
-        );
-        const adminUserId = adminUserResult.rows[0].id;
-        console.log('✓ Admin user created (ID:', adminUserId, ')');
+        // ── Admin user ──────────────────────────────────────────────────────────
+        const adminPassword = await bcrypt.hash('Admin@2027', SALT_ROUNDS);
+        const adminResult = await client.query(`
+            INSERT INTO users (first_name, last_name, email, password, role, is_active)
+            VALUES ('IEBC', 'Administrator', 'admin@iebc.go.ke', $1, 'admin', true)
+            ON CONFLICT (email) DO UPDATE SET password = $1
+            RETURNING id
+        `, [adminPassword]);
+        console.log('✅ Admin user seeded  (email: admin@iebc.go.ke  password: Admin@2027)');
 
-        // Insert admin record
-        await pool.query(
-            `INSERT INTO admins (user_id, position, department)
-             VALUES ($1, $2, $3)`,
-            [adminUserId, 'Chief Elections Officer', 'Elections Management']
-        );
-        console.log('✓ Admin record created');
+        // ── Sample voter ────────────────────────────────────────────────────────
+        const voterPassword = await bcrypt.hash('Voter@1234', SALT_ROUNDS);
+        const voterUserResult = await client.query(`
+            INSERT INTO users (first_name, last_name, email, password, role, is_active)
+            VALUES ('John', 'Kamau', 'john.kamau@example.com', $1, 'voter', true)
+            ON CONFLICT (email) DO UPDATE SET password = $1
+            RETURNING id
+        `, [voterPassword]);
 
-        // Insert voter users
-        const voters = [
-            { email: 'voter1@iebc.or.ke', nationalId: '25874123', firstName: 'John', lastName: 'Kipchoge', county: 'Nairobi', constituency: 'Starehe', stationId: 1 },
-            { email: 'voter2@iebc.or.ke', nationalId: '34521098', firstName: 'Jane', lastName: 'Wanjiru', county: 'Kiambu', constituency: 'Limuru', stationId: 2 },
-            { email: 'voter3@iebc.or.ke', nationalId: '45632187', firstName: 'Ahmed', lastName: 'Hassan', county: 'Mombasa', constituency: 'Mombasa', stationId: 3 },
-            { email: 'voter4@iebc.or.ke', nationalId: '56743298', firstName: 'Mary', lastName: 'Ochieng', county: 'Kisumu', constituency: 'Kisumu', stationId: 4 },
-            { email: 'voter5@iebc.or.ke', nationalId: '67854309', firstName: 'David', lastName: 'Mutua', county: 'Makueni', constituency: 'Makueni', stationId: 5 }
+        const voterUserId = voterUserResult.rows[0].id;
+        await client.query(`
+            INSERT INTO voters (user_id, national_id, county_id, polling_station_id, ward, has_voted)
+            VALUES ($1, '12345678', 1, 'PS001', 'Westlands', false)
+            ON CONFLICT (national_id) DO NOTHING
+        `, [voterUserId]);
+        console.log('✅ Sample voter seeded  (nationalId: 12345678  password: Voter@1234)');
+
+        // ── Election ────────────────────────────────────────────────────────────
+        const electionResult = await client.query(`
+            INSERT INTO elections (name, description, status, start_date, end_date)
+            VALUES (
+                'Kenya General Election 2027',
+                'General election for all elective positions under the Constitution of Kenya 2010',
+                'active',
+                NOW() - INTERVAL '1 hour',
+                NOW() + INTERVAL '12 hours'
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING id
+        `);
+
+        let electionId;
+        if (electionResult.rows.length > 0) {
+            electionId = electionResult.rows[0].id;
+        } else {
+            const r = await client.query(`SELECT id FROM elections WHERE name = 'Kenya General Election 2027'`);
+            electionId = r.rows[0].id;
+        }
+        console.log(`✅ Election seeded (id: ${electionId})`);
+
+        // ── Positions ───────────────────────────────────────────────────────────
+        const positions = [
+            { title: 'President', level: 'national', display_order: 1 },
+            { title: 'Governor', level: 'county', display_order: 2 },
+            { title: 'Senator', level: 'county', display_order: 3 },
+            { title: 'Member of Parliament', level: 'constituency', display_order: 4 },
+            { title: 'Women Representative', level: 'county', display_order: 5 },
+            { title: 'Member of County Assembly', level: 'ward', display_order: 6 }
         ];
 
-        for (const voter of voters) {
-            const userResult = await pool.query(
-                `INSERT INTO users (email, password_hash, first_name, last_name, role)
-                 VALUES ($1, $2, $3, $4, $5)
-                 RETURNING id`,
-                [voter.email, voterPassword, voter.firstName, voter.lastName, 'voter']
-            );
-            const userId = userResult.rows[0].id;
-
-            await pool.query(
-                `INSERT INTO voters (user_id, national_id, county, constituency, polling_station_id)
-                 VALUES ($1, $2, $3, $4, $5)`,
-                [userId, voter.nationalId, voter.county, voter.constituency, voter.stationId]
-            );
-            console.log(`✓ Voter created: ${voter.firstName} ${voter.lastName} (${voter.nationalId})`);
+        const positionIds = {};
+        for (const pos of positions) {
+            const r = await client.query(`
+                INSERT INTO positions (title, level, election_id, display_order)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT DO NOTHING
+                RETURNING id
+            `, [pos.title, pos.level, electionId, pos.display_order]);
+            if (r.rows.length > 0) positionIds[pos.title] = r.rows[0].id;
         }
+        // fetch any that already existed
+        const posResult = await client.query(
+            `SELECT id, title FROM positions WHERE election_id = $1`, [electionId]
+        );
+        posResult.rows.forEach(p => { positionIds[p.title] = positionIds[p.title] || p.id; });
+        console.log('✅ Positions seeded');
 
-        // Insert candidates if not exists
-        const candidatesCheck = await pool.query('SELECT COUNT(*) FROM candidates');
-        if (candidatesCheck.rows[0].count === 0) {
-            const candidates = [
-                { name: 'John Kipchoge', party: 'Democratic Alliance', symbol: '🦁' },
-                { name: 'Mary Wanjiru', party: 'Progressive Movement', symbol: '🌟' },
-                { name: 'Ahmed Hassan', party: 'Unity Coalition', symbol: '🕊️' }
-            ];
+        // ── Candidates (President) ───────────────────────────────────────────────
+        const presidentialCandidates = [
+            { name: 'Alice Wanjiru', party: 'United Democratic Alliance' },
+            { name: 'Brian Omondi', party: 'Orange Democratic Movement' },
+            { name: 'Carol Chebet', party: 'Wiper Democratic Movement' }
+        ];
 
-            for (const candidate of candidates) {
-                await pool.query(
-                    `INSERT INTO candidates (name, party, symbol)
-                     VALUES ($1, $2, $3)`,
-                    [candidate.name, candidate.party, candidate.symbol]
-                );
-                console.log(`✓ Candidate created: ${candidate.name}`);
+        const presidentPosId = positionIds['President'];
+        if (presidentPosId) {
+            for (const c of presidentialCandidates) {
+                await client.query(`
+                    INSERT INTO candidates (name, party, position_id, election_id)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT DO NOTHING
+                `, [c.name, c.party, presidentPosId, electionId]);
             }
+            console.log('✅ Presidential candidates seeded');
         }
 
-        // Insert election if not exists
-        const electionsCheck = await pool.query('SELECT COUNT(*) FROM elections');
-        if (electionsCheck.rows[0].count === 0) {
-            await pool.query(
-                `INSERT INTO elections (name, status, start_date, end_date)
-                 VALUES ($1, $2, $3, $4)`,
-                ['2027 General Election', 'upcoming', '2027-08-09 08:00:00', '2027-08-09 17:00:00']
-            );
-            console.log('✓ Election created');
-        }
+        await client.query('COMMIT');
+        console.log('\n🎉 Database seeded successfully!\n');
 
-        console.log('\n✅ Database seeding completed successfully!');
-        console.log('\n📝 Test Credentials:');
-        console.log('Admin:');
-        console.log('  Email: admin@iebc.or.ke');
-        console.log('  Password: admin123');
-        console.log('\nVoters:');
-        console.log('  National ID: 25874123, Password: voter123');
-        console.log('  National ID: 34521098, Password: voter123');
-        console.log('  National ID: 45632187, Password: voter123');
-        console.log('  National ID: 56743298, Password: voter123');
-        console.log('  National ID: 67854309, Password: voter123');
-
-        process.exit(0);
     } catch (error) {
-        console.error('❌ Error seeding database:', error);
-        process.exit(1);
+        await client.query('ROLLBACK');
+        console.error('❌ Seed failed:', error.message);
+        throw error;
+    } finally {
+        client.release();
+        await pool.end();
     }
 }
 
-// Run seeding
-seedDatabase();
+seed().catch(err => {
+    console.error(err);
+    process.exit(1);
+});

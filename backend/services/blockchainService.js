@@ -1,54 +1,167 @@
-const Web3 = require('web3');
+const { Web3 } = require('web3');
+const fs = require('fs');
+const path = require('path');
 
-// Connect to Ethereum network (Sepolia testnet or local)
-const web3 = new Web3(process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:7545');
+// ── Load contract ─────────────────────────────────────────────
+let contractAddress = null;
+let contractABI = null;
 
-// Contract ABI and address - you'll get these after deployment
-const CONTRACT_ABI = []; // Add your contract ABI here
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
+const contractPath = path.resolve(__dirname, '../../smart-contracts/contract-address.json');
+try {
+    const contractData = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    contractAddress = contractData.address;
+    contractABI = contractData.abi;
+    console.log('📦 Voting contract loaded:', contractAddress);
+} catch {
+    console.warn('⚠️  Contract not found at', contractPath);
+    console.warn('   Run: cd smart-contracts && npx hardhat run scripts/deploy.js --network ganache');
+}
 
-// Create blockchain transaction record
-async function createBlockchainTransaction(voteData) {
-    try {
-        // Generate a unique transaction hash
-        const transactionHash = '0x' + require('crypto').randomBytes(32).toString('hex');
-        
-        // In production, this would be an actual Ethereum transaction
-        // For now, we simulate the blockchain record
-        const blockNumber = Math.floor(Math.random() * 10000000) + 18000000;
-        
+// ── Web3 connection ───────────────────────────────────────────
+const GANACHE_URL = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:7545';
+const web3 = new Web3(GANACHE_URL);
+
+// Server account — signs ALL transactions (from Ganache accounts tab)
+const SERVER_ADDRESS     = process.env.SERVER_ETH_ADDRESS;
+const SERVER_PRIVATE_KEY = process.env.SERVER_ETH_PRIVATE_KEY;
+
+let votingContract = null;
+if (contractAddress && contractABI) {
+    votingContract = new web3.eth.Contract(contractABI, contractAddress);
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function generateVerificationCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'V-';
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+}
+
+// ── Cast vote on blockchain ───────────────────────────────────
+async function castVoteOnBlockchain(electionId, positionId, candidateId) {
+    const verificationCode = generateVerificationCode();
+
+    // If contract not deployed yet, return a simulated result for development
+    if (!votingContract || !SERVER_ADDRESS || !SERVER_PRIVATE_KEY) {
+        console.warn('⚠️  Blockchain not configured — using simulated transaction');
         return {
-            transactionHash: transactionHash,
-            blockNumber: blockNumber,
-            timestamp: new Date().toISOString(),
-            network: 'Ethereum',
-            confirmations: 12,
-            status: 'confirmed'
+            success: true,
+            simulated: true,
+            transactionHash: '0x' + require('crypto').randomBytes(32).toString('hex'),
+            verificationCode,
+            blockNumber: Math.floor(Math.random() * 1000000) + 18000000
         };
+    }
+
+    try {
+        const txData = votingContract.methods
+            .vote(electionId, positionId, candidateId, verificationCode)
+            .encodeABI();
+
+        const gasEstimate = await web3.eth.estimateGas({
+            from: SERVER_ADDRESS,
+            to: contractAddress,
+            data: txData
+        });
+
+        const gasPrice = await web3.eth.getGasPrice();
+
+        const signedTx = await web3.eth.accounts.signTransaction(
+            {
+                from: SERVER_ADDRESS,
+                to: contractAddress,
+                data: txData,
+                gas: Math.ceil(Number(gasEstimate) * 1.2),
+                gasPrice
+            },
+            SERVER_PRIVATE_KEY
+        );
+
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+        return {
+            success: true,
+            simulated: false,
+            transactionHash: receipt.transactionHash,
+            verificationCode,
+            blockNumber: Number(receipt.blockNumber)
+        };
+
     } catch (error) {
-        console.error('Blockchain transaction error:', error);
-        throw error;
+        console.error('Blockchain castVote error:', error.message);
+        return { success: false, error: error.message };
     }
 }
 
-// Verify transaction on blockchain
-async function verifyTransaction(transactionHash) {
+// ── Get vote count ────────────────────────────────────────────
+async function getBlockchainVoteCount(electionId, positionId, candidateId) {
+    if (!votingContract) return 0;
     try {
-        // In production, this would query the actual blockchain
-        // For now, return verified status
+        const count = await votingContract.methods
+            .getVoteCount(electionId, positionId, candidateId)
+            .call();
+        return parseInt(count);
+    } catch (error) {
+        console.error('getBlockchainVoteCount error:', error.message);
+        return 0;
+    }
+}
+
+// ── Verify vote code on-chain ─────────────────────────────────
+async function verifyVoteOnChain(verificationCode) {
+    if (!votingContract) return false;
+    try {
+        return await votingContract.methods.verifyVoteCode(verificationCode).call();
+    } catch (error) {
+        console.error('verifyVoteOnChain error:', error.message);
+        return false;
+    }
+}
+
+// ── Get election details ──────────────────────────────────────
+async function getElectionDetails(electionId) {
+    if (!votingContract) return null;
+    try {
+        const d = await votingContract.methods.getElection(electionId).call();
         return {
-            verified: true,
-            transactionHash: transactionHash,
-            network: 'Ethereum',
-            explorerUrl: `https://sepolia.etherscan.io/tx/${transactionHash}`
+            name: d[0],
+            startTime: parseInt(d[1]),
+            endTime: parseInt(d[2]),
+            isActive: d[3],
+            totalVotes: parseInt(d[4] || 0)
         };
     } catch (error) {
-        console.error('Verification error:', error);
-        return { verified: false, error: error.message };
+        console.error('getElectionDetails error:', error.message);
+        return null;
+    }
+}
+
+// ── Health check ──────────────────────────────────────────────
+async function checkBlockchainConnection() {
+    try {
+        const blockNumber = await web3.eth.getBlockNumber();
+        const networkId = await web3.eth.net.getId();
+        return {
+            connected: true,
+            blockNumber: Number(blockNumber),
+            networkId: Number(networkId),
+            contractLoaded: !!votingContract,
+            contractAddress: contractAddress || null
+        };
+    } catch (error) {
+        return { connected: false, error: error.message, contractLoaded: false };
     }
 }
 
 module.exports = {
-    createBlockchainTransaction,
-    verifyTransaction
+    web3,
+    votingContract,
+    contractAddress,
+    castVoteOnBlockchain,
+    getBlockchainVoteCount,
+    verifyVoteOnChain,
+    getElectionDetails,
+    generateVerificationCode,
+    checkBlockchainConnection
 };
