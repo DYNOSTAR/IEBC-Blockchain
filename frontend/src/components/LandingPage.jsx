@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/main.css';
+import Header from './Layout/Header';
+import Footer from './Layout/Footer';
 import '../styles/landing.css';
 
 const LandingPage = () => {
@@ -11,21 +12,21 @@ const LandingPage = () => {
             title: "2027 General Election Dates Announced",
             date: "March 15, 2026",
             content: "The 2027 General Election will be held on August 9, 2027. This will be Kenya's first blockchain-secured election.",
-            icon: "📢"
+            type: "info"
         },
         {
             id: 2,
             title: "Voter Registration Ongoing",
             date: "March 10, 2026",
             content: "Continuous voter registration is ongoing at all IEBC offices nationwide. Deadline: July 9, 2027.",
-            icon: "✅"
+            type: "success"
         },
         {
             id: 3,
             title: "Blockchain Voting System Launch",
             date: "February 28, 2026",
             content: "IEBC launches new blockchain-based voting system to enhance transparency and security.",
-            icon: "⛓️"
+            type: "info"
         }
     ]);
 
@@ -38,31 +39,8 @@ const LandingPage = () => {
 
     return (
         <div className="landing-page">
-            {/* Navigation Bar - IEBC Colors */}
-            <nav className="iebc-nav">
-                <div className="container">
-                    <div className="nav-container">
-                        <div className="logo" onClick={() => navigate('/')}>
-                            <div className="logo-icon">🗳️</div>
-                            <div className="logo-text">
-                                <span className="logo-title">IEBC</span>
-                                <span className="logo-subtitle">Kenya</span>
-                            </div>
-                        </div>
-                        <div className="nav-links">
-                            <button onClick={() => navigate('/')} className="nav-link active">Home</button>
-                            <button onClick={() => navigate('/verify')} className="nav-link">Verify Status</button>
-                            <button onClick={() => navigate('/results')} className="nav-link">Results</button>
-                        </div>
-                        <div className="nav-buttons">
-                            <button onClick={() => navigate('/login')} className="btn-voter">
-                                <span>🗳️</span> Voter Login
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
+            <Header />
+            
             {/* Hero Section */}
             <section className="hero-section">
                 <div className="hero-overlay"></div>
@@ -82,11 +60,14 @@ const LandingPage = () => {
                             Every vote recorded on an immutable blockchain ledger.
                         </p>
                         <div className="hero-buttons">
-                            <button onClick={() => navigate('/login')} className="hero-btn-primary">
-                                Start Voting
+                            <button onClick={() => navigate('/login')} className="btn-primary-large">
+                                Voter Login
                             </button>
-                            <button onClick={() => navigate('/verify')} className="hero-btn-secondary">
-                                Verify Registration
+                            <button onClick={() => navigate('/register')} className="btn-register-large">
+                                <span>📝</span> Register to Vote
+                            </button>
+                            <button onClick={() => navigate('/verify')} className="btn-secondary-large">
+                                Verify Status
                             </button>
                         </div>
                     </div>
@@ -116,10 +97,10 @@ const LandingPage = () => {
                         <div className="section-line"></div>
                     </div>
                     <div className="announcements-grid">
-                        {announcements.map(announcement => (
+                        {announcements.map((announcement) => (
                             <div key={announcement.id} className="announcement-card">
                                 <div className="announcement-header">
-                                    <div className="announcement-icon">{announcement.icon}</div>
+                                    <span className="announcement-icon">📢</span>
                                     <span className="announcement-date">{announcement.date}</span>
                                 </div>
                                 <h3 className="announcement-title">{announcement.title}</h3>
@@ -130,55 +111,26 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* CTA Section */}
+            {/* CTA Section with Background Image */}
             <section className="cta-section">
+                <div className="cta-bg-overlay"></div>
                 <div className="container">
                     <div className="cta-content">
                         <h2>Ready to Make Your Voice Heard?</h2>
                         <p>Join millions of Kenyans in shaping the future of our nation</p>
                         <div className="cta-buttons">
-                            <button onClick={() => navigate('/login')} className="cta-btn-primary">
-                                Vote Now
+                            <button onClick={() => navigate('/register')} className="cta-btn-primary">
+                                Register Now
                             </button>
-                            <button onClick={() => navigate('/verify')} className="cta-btn-secondary">
-                                Check Registration
+                            <button onClick={() => navigate('/login')} className="cta-btn-secondary">
+                                Login to Vote
                             </button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="iebc-footer">
-                <div className="container">
-                    <div className="footer-content">
-                        <div className="footer-section">
-                            <h4>IEBC Contact</h4>
-                            <p>📞 Toll Free: 0800-111-111</p>
-                            <p>📧 info@iebc.or.ke</p>
-                            <p>📍 Anniversary Towers, Nairobi</p>
-                        </div>
-                        <div className="footer-section">
-                            <h4>Quick Links</h4>
-                            <button onClick={() => navigate('/')}>Home</button>
-                            <button onClick={() => navigate('/verify')}>Verify Status</button>
-                            <button onClick={() => navigate('/results')}>Results</button>
-                        </div>
-                        <div className="footer-section">
-                            <h4>Follow Us</h4>
-                            <div className="social-links">
-                                <a href="#" className="social-link">🐦 Twitter</a>
-                                <a href="#" className="social-link">📘 Facebook</a>
-                                <a href="#" className="social-link">📸 Instagram</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="footer-bottom">
-                        <p>&copy; 2027 Independent Electoral and Boundaries Commission - Kenya</p>
-                        <p className="footer-tagline">Your Vote, Your Future</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 };

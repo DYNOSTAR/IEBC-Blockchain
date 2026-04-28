@@ -5,21 +5,20 @@ const Footer = () => {
     const currentYear = new Date().getFullYear();
     
     return (
-        <footer className="iebc-footer">
+        <footer className="kenyan-footer">
             <div className="container">
                 <div className="footer-grid">
                     <div className="footer-section">
-                        <h3>IEBC Contact</h3>
+                        <h4>IEBC Contact</h4>
                         <ul>
                             <li>📞 Toll Free: 0800-111-111</li>
-                            <li>📱 SMS: 22222</li>
-                            <li>📧 Email: info@iebc.or.ke</li>
+                            <li>📧 info@iebc.or.ke</li>
                             <li>📍 Anniversary Towers, Nairobi</li>
                         </ul>
                     </div>
                     
                     <div className="footer-section">
-                        <h3>Quick Links</h3>
+                        <h4>Quick Links</h4>
                         <ul>
                             <li><a href="/">Home</a></li>
                             <li><a href="/verify">Verify Registration</a></li>
@@ -29,7 +28,7 @@ const Footer = () => {
                     </div>
                     
                     <div className="footer-section">
-                        <h3>Blockchain Info</h3>
+                        <h4>Blockchain Info</h4>
                         <ul>
                             <li>🔗 Network: Ethereum</li>
                             <li>✅ Consensus: Proof of Stake</li>
@@ -39,27 +38,19 @@ const Footer = () => {
                     </div>
                     
                     <div className="footer-section">
-                        <h3>Support</h3>
-                        <ul>
-                            <li>📖 Voter Education</li>
-                            <li>❓ FAQ</li>
-                            <li>📞 Help Desk: 0700-123-456</li>
-                            <li>💬 Live Chat</li>
-                        </ul>
+                        <h4>Follow Us</h4>
+                        <div className="social-links">
+                            <a href="#" className="social-link">🐦 Twitter</a>
+                            <a href="#" className="social-link">📘 Facebook</a>
+                            <a href="#" className="social-link">📸 Instagram</a>
+                            <a href="#" className="social-link">▶️ YouTube</a>
+                        </div>
                     </div>
                 </div>
                 
                 <div className="footer-bottom">
-                    <div className="footer-copyright">
-                        <p>&copy; {currentYear} Independent Electoral and Boundaries Commission - Kenya</p>
-                        <p>All votes are recorded on the blockchain for transparency and security</p>
-                    </div>
-                    <div className="footer-social">
-                        <a href="#" className="social-icon">📘</a>
-                        <a href="#" className="social-icon">🐦</a>
-                        <a href="#" className="social-icon">📸</a>
-                        <a href="#" className="social-icon">▶️</a>
-                    </div>
+                    <p>&copy; {currentYear} Independent Electoral and Boundaries Commission - Kenya</p>
+                    <p className="footer-tagline">Your Vote, Your Future</p>
                 </div>
             </div>
         </footer>

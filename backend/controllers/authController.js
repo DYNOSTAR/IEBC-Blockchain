@@ -2,6 +2,181 @@ const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
+// ── Register new voter ────────────────────────────────────────
+const registerVoter = async (req, res) => {
+    const { firstName, lastName, nationalId, email, phone, county, constituency, pollingStation, password } = req.body;
+ 
+    if (!firstName || !lastName || !nationalId || !email || !phone || !password) {
+        return res.status(400).json({ success: false, error: 'All required fields must be filled.' });
+    }
+ 
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+ 
+        // Check national ID not already registered
+        const existing = await client.query(
+            'SELECT id FROM voters WHERE national_id = $1', [nationalId]
+        );
+        if (existing.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ success: false, error: 'This National ID is already registered.' });
+        }
+ 
+        // Check email not taken
+        const emailCheck = await client.query(
+            'SELECT id FROM users WHERE email = $1', [email]
+        );
+        if (emailCheck.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ success: false, error: 'This email is already in use.' });
+        }
+ 
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12);
+ 
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpHash = await bcrypt.hash(otp, 10);
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+ 
+        // Get county ID
+        const countyResult = await client.query(
+            'SELECT id FROM counties WHERE name ILIKE $1', [county]
+        );
+        const countyId = countyResult.rows[0]?.id || null;
+ 
+        // Create user (not active until OTP verified)
+        const userResult = await client.query(
+            `INSERT INTO users (first_name, last_name, email, password, role, is_active, otp_code, otp_expires_at)
+             VALUES ($1, $2, $3, $4, 'voter', FALSE, $5, $6)
+             RETURNING id`,
+            [firstName, lastName, email, hashedPassword, otpHash, otpExpiry]
+        );
+ 
+        const userId = userResult.rows[0].id;
+ 
+        // Create voter record
+        await client.query(
+            `INSERT INTO voters (user_id, national_id, polling_station_id, county_id, ward, has_voted)
+             VALUES ($1, $2, $3, $4, $5, FALSE)`,
+            [userId, nationalId, pollingStation || null, countyId, constituency || null]
+        );
+ 
+        await client.query('COMMIT');
+ 
+        // TODO: Send OTP via Africa's Talking SMS or Nodemailer
+        // For development, log the OTP to console
+        console.log(`\n📱 OTP for ${email} / ${phone}: ${otp}\n`);
+ 
+        res.status(201).json({
+            success: true,
+            userId,
+            message: `Verification code sent to ${phone} and ${email}. Enter it to activate your account.`
+        });
+ 
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Registration error:', error);
+        res.status(500).json({ success: false, error: 'Registration failed. Please try again.' });
+    } finally {
+        client.release();
+    }
+};
+
+// ── Verify OTP ────────────────────────────────────────────────
+const verifyOtp = async (req, res) => {
+    const { userId, otpCode } = req.body;
+ 
+    if (!userId || !otpCode) {
+        return res.status(400).json({ success: false, error: 'User ID and OTP code are required.' });
+    }
+ 
+    try {
+        const result = await pool.query(
+            'SELECT otp_code, otp_expires_at FROM users WHERE id = $1',
+            [userId]
+        );
+ 
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+ 
+        const { otp_code, otp_expires_at } = result.rows[0];
+ 
+        if (!otp_code) {
+            return res.status(400).json({ success: false, error: 'No pending verification for this account.' });
+        }
+ 
+        if (new Date() > new Date(otp_expires_at)) {
+            return res.status(400).json({ success: false, error: 'Verification code has expired. Please request a new one.' });
+        }
+ 
+        const isValid = await bcrypt.compare(otpCode.trim(), otp_code);
+        if (!isValid) {
+            return res.status(400).json({ success: false, error: 'Invalid verification code.' });
+        }
+ 
+        // Activate account and clear OTP
+        await pool.query(
+            'UPDATE users SET is_active = TRUE, otp_code = NULL, otp_expires_at = NULL WHERE id = $1',
+            [userId]
+        );
+ 
+        await pool.query(
+            'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
+            [userId, 'ACCOUNT_VERIFIED', 'Voter account activated via OTP']
+        );
+ 
+        res.json({ success: true, message: 'Account verified successfully. You can now login.' });
+ 
+    } catch (error) {
+        console.error('OTP verification error:', error);
+        res.status(500).json({ success: false, error: 'Verification failed. Please try again.' });
+    }
+};
+ 
+// ── Resend OTP ────────────────────────────────────────────────
+const resendOtp = async (req, res) => {
+    const { userId } = req.body;
+ 
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User ID is required.' });
+    }
+ 
+    try {
+        const result = await pool.query(
+            'SELECT email, is_active FROM users WHERE id = $1', [userId]
+        );
+ 
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+ 
+        if (result.rows[0].is_active) {
+            return res.status(400).json({ success: false, error: 'Account is already verified.' });
+        }
+ 
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpHash = await bcrypt.hash(otp, 10);
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+ 
+        await pool.query(
+            'UPDATE users SET otp_code = $1, otp_expires_at = $2 WHERE id = $3',
+            [otpHash, otpExpiry, userId]
+        );
+ 
+        // TODO: Send via SMS/email
+        console.log(`\n📱 New OTP for user ${userId}: ${otp}\n`);
+ 
+        res.json({ success: true, message: 'New verification code sent.' });
+ 
+    } catch (error) {
+        console.error('Resend OTP error:', error);
+        res.status(500).json({ success: false, error: 'Failed to resend code.' });
+    }
+};
+
 // Voter Login
 const voterLogin = async (req, res) => {
     const { nationalId, password } = req.body;
@@ -223,4 +398,4 @@ const logout = async (req, res) => {
     }
 };
 
-module.exports = { voterLogin, adminLogin, verifyVoter, getCurrentUser, logout };
+module.exports = { voterLogin, adminLogin, verifyVoter, getCurrentUser, logout, registerVoter, verifyOtp, resendOtp};

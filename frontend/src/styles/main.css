@@ -1,4 +1,19 @@
-/* Global Styles */
+/* Kenyan Election Theme Colors */
+:root {
+    --kenyan-green: #00A651;
+    --kenyan-red: #C8102E;
+    --kenyan-black: #111111;
+    --kenyan-dark-green: #014421;
+    --kenyan-charcoal: #0B0B0B;
+    --background-light: #F8F9FA;
+    --card-white: #FFFFFF;
+    --text-dark: #1A1A1A;
+    --text-gray: #6B7280;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -7,67 +22,69 @@
 
 body {
     font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
+    background: var(--background-light);
+    color: var(--text-dark);
 }
 
-/* Container */
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
 }
 
-/* Buttons */
-.btn {
-    padding: 12px 24px;
+/* Kenyan Theme Buttons */
+.btn-primary {
+    background: var(--kenyan-green);
+    color: white;
     border: none;
+    padding: 12px 24px;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 16px;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
 }
 
 .btn-primary:hover {
+    background: #008a3e;
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-}
-
-.btn-secondary {
-    background: #48bb78;
-    color: white;
+    box-shadow: var(--shadow-md);
 }
 
 .btn-danger {
-    background: #f56565;
+    background: var(--kenyan-red);
     color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-/* Cards */
+.btn-danger:hover {
+    background: #a00c25;
+    transform: translateY(-2px);
+}
+
+/* Cards with Green Accent Border */
 .card {
-    background: white;
+    background: var(--card-white);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    padding: 20px;
-    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--kenyan-green);
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Animations */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .fade-in {
@@ -75,43 +92,31 @@ body {
 }
 
 @keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.05);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-.pulse {
-    animation: pulse 2s infinite;
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 /* Loading Spinner */
 .spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
     width: 40px;
     height: 40px;
+    border: 4px solid var(--background-light);
+    border-top-color: var(--kenyan-green);
+    border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 768px) {
     .container {
         padding: 0 15px;
     }
     
-    .btn {
+    .btn-primary, .btn-danger {
         padding: 10px 20px;
         font-size: 14px;
     }
