@@ -19,62 +19,34 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Response interceptor for error handling
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.code === 'ECONNABORTED') {
-            console.error('Request timeout:', error);
-        } else if (error.response?.status === 429) {
-            console.error('Too many requests, please wait');
-        } else if (error.response?.status === 404) {
-            console.error('API endpoint not found:', error.config?.url);
-        }
-        return Promise.reject(error);
-    }
-);
-
 export const authAPI = {
-    // Voter login
-    voterLogin: (identifier, password) => 
-        api.post('/auth/voter/login', { 
-            nationalId: identifier, 
-            password 
-        }),
+    voterLogin: (nationalId, password) => 
+        api.post('/auth/voter/login', { nationalId, password }),
     
-    // Admin login
     adminLogin: (email, password) => 
         api.post('/auth/admin/login', { email, password }),
     
-    // Verify voter
     verifyVoter: (nationalId) => 
         api.post('/auth/verify-voter', { nationalId }),
     
-    // Register new voter
     register: (userData) => 
         api.post('/auth/register', userData),
     
-    // Verify OTP
     verifyOtp: (userId, otpCode) => 
         api.post('/auth/verify-otp', { userId, otpCode }),
     
-    // Resend OTP
     resendOtp: (userId) => 
         api.post('/auth/resend-otp', { userId }),
     
-    // Get counties
     getCounties: () => 
         api.get('/auth/counties'),
     
-    // Get constituencies by county
     getConstituencies: (countyId) => 
         api.get(`/auth/constituencies/${countyId}`),
     
-    // Get wards by constituency
     getWards: (constituencyId) => 
         api.get(`/auth/wards/${constituencyId}`),
     
-    // Get polling stations by ward
     getPollingStations: (wardId) => 
         api.get(`/auth/polling-stations/${wardId}`),
 };
@@ -95,7 +67,6 @@ export const electionAPI = {
     checkCompletion: (electionId) => 
         api.get(`/elections/check-completion/${electionId}`),
     
-    // Alias for voteAPI compatibility
     getVoteCount: (electionId, positionId, candidateId) => 
         api.get(`/elections/vote-count/${electionId}/${positionId}/${candidateId}`),
     
@@ -106,61 +77,27 @@ export const electionAPI = {
         api.get(`/elections/blockchain-status/${electionId}`),
 };
 
-// Alias for voteAPI (to fix the import error)
+// This fixes the voteAPI import error
 export const voteAPI = electionAPI;
 
 export const adminAPI = {
-    getCounties: () => 
-        api.get('/admin/counties'),
-    
-    addCounty: (countyData) => 
-        api.post('/admin/counties', countyData),
-    
-    getConstituencies: () => 
-        api.get('/admin/constituencies'),
-    
-    addConstituency: (constituencyData) => 
-        api.post('/admin/constituencies', constituencyData),
-    
-    getWards: () => 
-        api.get('/admin/wards'),
-    
-    addWard: (wardData) => 
-        api.post('/admin/wards', wardData),
-    
-    getPollingStations: () => 
-        api.get('/admin/polling-stations'),
-    
-    addPollingStation: (stationData) => 
-        api.post('/admin/polling-stations', stationData),
-    
-    getParties: () => 
-        api.get('/admin/parties'),
-    
-    addParty: (partyData) => 
-        api.post('/admin/parties', partyData),
-    
-    getCandidates: () => 
-        api.get('/admin/candidates'),
-    
-    addCandidate: (candidateData) => 
-        api.post('/admin/candidates', candidateData),
-    
-    getElections: () => 
-        api.get('/admin/elections'),
-    
-    addElection: (electionData) => 
-        api.post('/admin/elections', electionData),
-    
-    getVoters: () => 
-        api.get('/admin/voters'),
-    
-    activateElection: (electionId) => 
-        api.put(`/admin/elections/${electionId}/activate`),
-    
-    deactivateElection: (electionId) => 
-        api.put(`/admin/elections/${electionId}/deactivate`),
+    getCounties: () => api.get('/admin/counties'),
+    addCounty: (data) => api.post('/admin/counties', data),
+    getConstituencies: () => api.get('/admin/constituencies'),
+    addConstituency: (data) => api.post('/admin/constituencies', data),
+    getWards: () => api.get('/admin/wards'),
+    addWard: (data) => api.post('/admin/wards', data),
+    getPollingStations: () => api.get('/admin/polling-stations'),
+    addPollingStation: (data) => api.post('/admin/polling-stations', data),
+    getParties: () => api.get('/admin/parties'),
+    addParty: (data) => api.post('/admin/parties', data),
+    getCandidates: () => api.get('/admin/candidates'),
+    addCandidate: (data) => api.post('/admin/candidates', data),
+    getElections: () => api.get('/admin/elections'),
+    addElection: (data) => api.post('/admin/elections', data),
+    getVoters: () => api.get('/admin/voters'),
+    activateElection: (id) => api.put(`/admin/elections/${id}/activate`),
+    deactivateElection: (id) => api.put(`/admin/elections/${id}/deactivate`),
 };
 
-// Also export as default for convenience
 export default api;

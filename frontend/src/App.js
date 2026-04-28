@@ -2,13 +2,13 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import VoterLogin from './components/VoterLogin';
+import VoterRegistration from './components/VoterRegistration';
+import VoterPortal from './components/VoterPortal';
 import AdminLogin from './components/AdminLogin';
-import VotingDashboard from './components/VotingDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import ResultsPage from './components/ResultsPage';
 import VoterVerification from './components/VoterVerification';
-import VoterRegistration from './components/VoterRegistration';
 import './styles/main.css';
-import AdminDashboard from './components/AdminDashboard';
 
 const ProtectedRoute = ({ children, role }) => {
     const token = localStorage.getItem('token');
@@ -31,18 +31,17 @@ function App() {
             <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<VoterLogin />} />
+                <Route path="/register" element={<VoterRegistration />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/verify" element={<VoterVerification />} />
                 <Route 
-                    path="/voting" 
+                    path="/portal" 
                     element={
                         <ProtectedRoute role="voter">
-                            <VotingDashboard />
+                            <VoterPortal />
                         </ProtectedRoute>
                     } 
                 />
-                <Route path="/results" element={<ResultsPage />} />
-                <Route path="/register" element={<VoterRegistration />} />
                 <Route 
                     path="/admin/dashboard" 
                     element={
@@ -51,6 +50,7 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
+                <Route path="/results" element={<ResultsPage />} />
             </Routes>
         </Router>
     );

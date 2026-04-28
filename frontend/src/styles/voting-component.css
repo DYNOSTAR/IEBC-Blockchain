@@ -1,0 +1,228 @@
+.voting-component {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.voting-progress {
+    margin-bottom: 30px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.progress-bar-container {
+    background: #e2e8f0;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    background: var(--kenyan-green, #00A651);
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.voting-card {
+    background: var(--background-light);
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.position-header {
+    background: linear-gradient(135deg, var(--kenyan-green), #008a3e);
+    color: white;
+    padding: 25px;
+    text-align: center;
+}
+
+.position-counter {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+.position-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+}
+
+.candidates-container {
+    padding: 20px;
+}
+
+.candidate-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid #e2e8f0;
+}
+
+.candidate-item:hover {
+    transform: translateX(5px);
+    border-color: var(--kenyan-green);
+}
+
+.candidate-item.selected {
+    border-color: var(--kenyan-green);
+    background: #f0fff4;
+}
+
+.candidate-symbol {
+    font-size: 2rem;
+}
+
+.candidate-details {
+    flex: 1;
+}
+
+.candidate-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #1a1f2e;
+}
+
+.candidate-party {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.candidate-check {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.candidate-item.selected .candidate-check {
+    background: var(--kenyan-green);
+    border-color: var(--kenyan-green);
+    color: white;
+}
+
+.error-message {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 12px;
+    margin: 0 20px 20px;
+    border-radius: 8px;
+}
+
+.voting-navigation {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    background: #f7fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.nav-prev, .nav-next, .nav-submit {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-prev {
+    background: #cbd5e0;
+    color: #4a5568;
+}
+
+.nav-prev:hover:not(:disabled) {
+    background: #a0aec0;
+    transform: translateX(-3px);
+}
+
+.nav-next {
+    background: var(--kenyan-green);
+    color: white;
+}
+
+.nav-next:hover:not(:disabled) {
+    background: #008a3e;
+    transform: translateX(3px);
+}
+
+.nav-submit {
+    background: #48bb78;
+    color: white;
+}
+
+.nav-submit:hover:not(:disabled) {
+    background: #38a169;
+    transform: scale(1.02);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.voting-loading-state, .voting-success-state {
+    text-align: center;
+    padding: 40px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top-color: var(--kenyan-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+.success-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.verification-summary {
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.verification-item {
+    padding: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.done-btn {
+    background: var(--kenyan-green);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

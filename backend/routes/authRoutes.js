@@ -4,38 +4,23 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 
-// ============ REGISTRATION ROUTE ============
+// ============ REGISTRATION - Simple ============
 router.post('/register', async (req, res) => {
-    const {
-        firstName,
-        lastName,
-        nationalId,
-        passportNumber,
-        email,
-        phone,
-        county,
-        constituency,
-        ward,
-        pollingStation,
-        password
-    } = req.body;
+    const { nationalId, firstName, lastName, password } = req.body;
     
-    console.log('Registration attempt for:', { firstName, lastName, nationalId, email });
+    console.log('Registration attempt:', { nationalId, firstName, lastName });
     
     try {
-        // Check if voter already exists
-        const existingCheck = await pool.query(
-            `SELECT v.id FROM voters v 
-             WHERE v.national_id = $1 
-             UNION 
-             SELECT u.id FROM users u WHERE u.email = $2`,
-            [nationalId, email]
+        // Check if national ID already exists
+        const existingUser = await pool.query(
+            'SELECT id FROM users WHERE national_id = $1',
+            [nationalId]
         );
         
-        if (existingCheck.rows.length > 0) {
+        if (existingUser.rows.length > 0) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Voter already registered with this National ID or Email' 
+                error: 'National ID already registered. Please login.' 
             });
         }
         
@@ -43,43 +28,28 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         
-        // Create username from national ID
-        const username = `voter_${nationalId}`;
-        
-        // Create user account
+        // Create user - national_id is the primary identifier
         const userResult = await pool.query(
-            `INSERT INTO users (username, email, password_hash, first_name, last_name, role, phone, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `INSERT INTO users (national_id, first_name, last_name, password_hash, role)
+             VALUES ($1, $2, $3, $4, $5)
              RETURNING id`,
-            [username, email, hashedPassword, firstName, lastName, 'voter', phone, true]
+            [nationalId, firstName, lastName, hashedPassword, 'voter']
         );
         
         const userId = userResult.rows[0].id;
         
-        // Get polling station ID if provided
-        let pollingStationId = null;
-        if (pollingStation) {
-            const psResult = await pool.query(
-                `SELECT id FROM polling_stations WHERE code = $1 OR name ILIKE $2 LIMIT 1`,
-                [pollingStation, `%${pollingStation}%`]
-            );
-            if (psResult.rows.length > 0) {
-                pollingStationId = psResult.rows[0].id;
-            }
-        }
-        
         // Create voter record
         await pool.query(
-            `INSERT INTO voters (user_id, national_id, passport_number, county_id, constituency_id, ward_id, polling_station_id, has_voted)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [userId, nationalId, passportNumber || null, county || null, constituency || null, ward || null, pollingStationId, false]
+            `INSERT INTO voters (user_id, has_voted)
+             VALUES ($1, $2)`,
+            [userId, false]
         );
         
         // Log registration
         await pool.query(
             `INSERT INTO audit_logs (user_id, action, details)
              VALUES ($1, $2, $3)`,
-            [userId, 'REGISTRATION', `Voter ${nationalId} (${firstName} ${lastName}) registered successfully`]
+            [userId, 'REGISTRATION', `Voter ${nationalId} (${firstName} ${lastName}) registered`]
         );
         
         console.log('Registration successful for:', nationalId);
@@ -98,157 +68,100 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// ============ GET COUNTIES ============
-router.get('/counties', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, name, code FROM counties ORDER BY name');
-        res.json({ success: true, counties: result.rows });
-    } catch (error) {
-        console.error('Error fetching counties:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ============ GET CONSTITUENCIES BY COUNTY ============
-router.get('/constituencies/:countyId', async (req, res) => {
-    const { countyId } = req.params;
-    try {
-        const result = await pool.query(
-            `SELECT id, name, code FROM constituencies WHERE county_id = $1 ORDER BY name`,
-            [countyId]
-        );
-        res.json({ success: true, constituencies: result.rows });
-    } catch (error) {
-        console.error('Error fetching constituencies:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ============ GET WARDS BY CONSTITUENCY ============
-router.get('/wards/:constituencyId', async (req, res) => {
-    const { constituencyId } = req.params;
-    try {
-        const result = await pool.query(
-            `SELECT id, name, code FROM wards WHERE constituency_id = $1 ORDER BY name`,
-            [constituencyId]
-        );
-        res.json({ success: true, wards: result.rows });
-    } catch (error) {
-        console.error('Error fetching wards:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ============ GET POLLING STATIONS BY WARD ============
-router.get('/polling-stations/:wardId', async (req, res) => {
-    const { wardId } = req.params;
-    try {
-        const result = await pool.query(
-            `SELECT id, name, code, location FROM polling_stations WHERE ward_id = $1 ORDER BY name`,
-            [wardId]
-        );
-        res.json({ success: true, pollingStations: result.rows });
-    } catch (error) {
-        console.error('Error fetching polling stations:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ============ VOTER LOGIN ============
+// ============ VOTER LOGIN - Using National ID ============
 router.post('/voter/login', async (req, res) => {
     const { nationalId, password } = req.body;
     
-    console.log('Voter login attempt for ID:', nationalId);
+    console.log('Login attempt for ID:', nationalId);
     
     try {
+        const nationalIdStr = String(nationalId).trim();
+        
         const query = `
             SELECT 
                 u.id as user_id,
+                u.national_id,
                 u.first_name,
                 u.last_name,
-                u.email,
                 u.password_hash,
                 u.role,
                 u.is_active,
                 v.id as voter_id,
-                v.national_id,
-                v.polling_station_id,
-                v.has_voted,
-                v.county_id,
-                c.name as county_name
-            FROM voters v
-            JOIN users u ON v.user_id = u.id
-            LEFT JOIN counties c ON v.county_id = c.id
-            WHERE v.national_id = $1
+                v.has_voted
+            FROM users u
+            LEFT JOIN voters v ON u.id = v.user_id
+            WHERE u.national_id = $1
         `;
         
-        const result = await pool.query(query, [nationalId]);
+        const result = await pool.query(query, [nationalIdStr]);
         
         if (result.rows.length === 0) {
+            console.log('No user found with ID:', nationalIdStr);
             return res.status(401).json({ 
                 success: false, 
                 error: 'Invalid National ID or password' 
             });
         }
         
-        const voter = result.rows[0];
+        const user = result.rows[0];
         
-        if (!voter.is_active) {
+        if (!user.is_active) {
             return res.status(401).json({ 
                 success: false, 
-                error: 'Your account has been deactivated. Please contact IEBC.' 
+                error: 'Account deactivated. Contact IEBC.' 
             });
         }
         
-        const isValidPassword = await bcrypt.compare(password, voter.password_hash);
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, user.password_hash);
         
         if (!isValidPassword) {
+            console.log('Invalid password for user:', nationalIdStr);
             return res.status(401).json({ 
                 success: false, 
                 error: 'Invalid National ID or password' 
             });
         }
         
+        // Update last login
         await pool.query(
             'UPDATE users SET last_login = NOW() WHERE id = $1',
-            [voter.user_id]
+            [user.user_id]
         );
         
+        // Generate JWT token
         const token = jwt.sign(
             { 
-                id: voter.user_id, 
+                id: user.user_id, 
+                nationalId: user.national_id,
                 role: 'voter',
-                nationalId: voter.national_id,
-                voterId: voter.voter_id
+                voterId: user.voter_id
             },
             process.env.JWT_SECRET || 'test_secret_key',
             { expiresIn: '24h' }
         );
         
+        // Log login
         await pool.query(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
-            [voter.user_id, 'VOTER_LOGIN', `Voter ${nationalId} logged in successfully`]
+            `INSERT INTO audit_logs (user_id, action, details)
+             VALUES ($1, $2, $3)`,
+            [user.user_id, 'LOGIN', `Voter ${nationalId} logged in successfully`]
         );
         
         res.json({
             success: true,
             token,
             voter: {
-                id: voter.voter_id,
-                userId: voter.user_id,
-                nationalId: voter.national_id,
-                firstName: voter.first_name,
-                lastName: voter.last_name,
-                email: voter.email,
-                pollingStationId: voter.polling_station_id,
-                countyId: voter.county_id,
-                countyName: voter.county_name,
-                hasVoted: voter.has_voted
+                id: user.voter_id,
+                nationalId: user.national_id,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                hasVoted: user.has_voted || false
             }
         });
         
     } catch (error) {
-        console.error('Voter login error:', error);
+        console.error('Login error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Server error: ' + error.message 
@@ -258,40 +171,33 @@ router.post('/voter/login', async (req, res) => {
 
 // ============ ADMIN LOGIN ============
 router.post('/admin/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { nationalId, password } = req.body;
     
-    console.log('Admin login attempt for:', email);
+    console.log('Admin login attempt for ID:', nationalId);
     
     try {
         const query = `
             SELECT * FROM users 
-            WHERE email = $1 AND role IN ('admin', 'iebc_official')
+            WHERE national_id = $1 AND role = 'admin'
         `;
         
-        const result = await pool.query(query, [email]);
+        const result = await pool.query(query, [nationalId]);
         
         if (result.rows.length === 0) {
             return res.status(401).json({ 
                 success: false, 
-                error: 'Invalid email or password' 
+                error: 'Invalid credentials' 
             });
         }
         
         const admin = result.rows[0];
-        
-        if (!admin.is_active) {
-            return res.status(401).json({ 
-                success: false, 
-                error: 'Your account has been deactivated.' 
-            });
-        }
         
         const isValidPassword = await bcrypt.compare(password, admin.password_hash);
         
         if (!isValidPassword) {
             return res.status(401).json({ 
                 success: false, 
-                error: 'Invalid email or password' 
+                error: 'Invalid credentials' 
             });
         }
         
@@ -303,17 +209,11 @@ router.post('/admin/login', async (req, res) => {
         const token = jwt.sign(
             { 
                 id: admin.id, 
-                role: admin.role,
-                email: admin.email,
-                name: `${admin.first_name} ${admin.last_name}`
+                nationalId: admin.national_id,
+                role: 'admin'
             },
             process.env.JWT_SECRET || 'test_secret_key',
             { expiresIn: '24h' }
-        );
-        
-        await pool.query(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
-            [admin.id, 'ADMIN_LOGIN', `Admin ${email} logged in successfully`]
         );
         
         res.json({
@@ -321,8 +221,8 @@ router.post('/admin/login', async (req, res) => {
             token,
             admin: {
                 id: admin.id,
+                nationalId: admin.national_id,
                 name: `${admin.first_name} ${admin.last_name}`,
-                email: admin.email,
                 role: admin.role
             }
         });
@@ -343,18 +243,13 @@ router.post('/verify-voter', async (req, res) => {
     try {
         const query = `
             SELECT 
-                v.national_id,
+                u.national_id,
                 u.first_name,
                 u.last_name,
-                c.name as county_name,
-                ps.name as polling_station_name,
-                w.name as ward_name
-            FROM voters v
-            JOIN users u ON v.user_id = u.id
-            LEFT JOIN counties c ON v.county_id = c.id
-            LEFT JOIN polling_stations ps ON v.polling_station_id = ps.id
-            LEFT JOIN wards w ON v.ward_id = w.id
-            WHERE v.national_id = $1
+                v.has_voted
+            FROM users u
+            LEFT JOIN voters v ON u.id = v.user_id
+            WHERE u.national_id = $1 AND u.role = 'voter'
         `;
         
         const result = await pool.query(query, [nationalId]);
@@ -373,9 +268,7 @@ router.post('/verify-voter', async (req, res) => {
             voter: {
                 fullName: `${voter.first_name} ${voter.last_name}`,
                 nationalId: voter.national_id,
-                county: voter.county_name,
-                pollingStation: voter.polling_station_name,
-                ward: voter.ward_name,
+                hasVoted: voter.has_voted,
                 status: 'Registered'
             }
         });

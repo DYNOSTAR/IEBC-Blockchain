@@ -28,7 +28,7 @@ app.use('/api/admin', adminRoutes);
 // Counties route (direct)
 app.get('/api/counties', async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, code, headquarters FROM counties ORDER BY name');
+        const result = await pool.query('SELECT id, name, code FROM counties ORDER BY name');
         res.json({ success: true, counties: result.rows });
     } catch (error) {
         console.error('Error fetching counties:', error);
