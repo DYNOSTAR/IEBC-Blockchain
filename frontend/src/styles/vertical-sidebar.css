@@ -1,0 +1,160 @@
+.vertical-sidebar {
+    width: 280px;
+    background: white;
+    min-height: calc(100vh - 80px);
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 30px 20px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: white;
+}
+
+.sidebar-welcome {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.sidebar-tagline {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.sidebar-nav-item {
+    width: 100%;
+    padding: 14px 24px;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    font-size: 1rem;
+    color: #1e3c72;
+    font-weight: 500;
+}
+
+.sidebar-nav-item:hover {
+    background: #f0fdf4;
+    transform: translateX(5px);
+}
+
+.sidebar-nav-item.active {
+    background: #f0fdf4;
+    color: #00A651;
+    border-right: 3px solid #00A651;
+}
+
+.nav-icon {
+    font-size: 1.3rem;
+    width: 30px;
+    text-align: center;
+}
+
+.nav-label {
+    flex: 1;
+    text-align: left;
+}
+
+.nav-indicator {
+    width: 6px;
+    height: 6px;
+    background: transparent;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.sidebar-nav-item.active .nav-indicator {
+    background: #00A651;
+    box-shadow: 0 0 5px #00A651;
+}
+
+.sidebar-footer {
+    padding: 20px;
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.sidebar-election {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e3c72;
+    margin-bottom: 8px;
+}
+
+.sidebar-secure {
+    font-size: 0.7rem;
+    color: #00A651;
+}
+
+/* Scrollbar styling */
+.vertical-sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.vertical-sidebar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.vertical-sidebar::-webkit-scrollbar-thumb {
+    background: #00A651;
+    border-radius: 5px;
+}
+
+@media (max-width: 768px) {
+    .vertical-sidebar {
+        width: 80px;
+    }
+    
+    .sidebar-header {
+        padding: 15px 5px;
+    }
+    
+    .sidebar-welcome {
+        font-size: 0.7rem;
+    }
+    
+    .sidebar-tagline {
+        display: none;
+    }
+    
+    .nav-label {
+        display: none;
+    }
+    
+    .sidebar-nav-item {
+        justify-content: center;
+        padding: 14px 0;
+    }
+    
+    .nav-icon {
+        font-size: 1.5rem;
+        width: auto;
+    }
+    
+    .sidebar-footer {
+        font-size: 0.6rem;
+    }
+    
+    .sidebar-election {
+        font-size: 0.6rem;
+    }
+}

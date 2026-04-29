@@ -1,0 +1,120 @@
+.portal-header {
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 3px solid #00A651;
+}
+
+.portal-header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 12px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.portal-logos {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.logo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.logo-item:hover {
+    transform: scale(1.02);
+}
+
+.portal-logo-img {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
+.logo-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e3c72;
+}
+
+.logo-divider {
+    width: 1px;
+    height: 40px;
+    background: #e2e8f0;
+}
+
+.portal-user-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #f8fafc;
+    padding: 8px 20px;
+    border-radius: 50px;
+}
+
+.portal-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.portal-user-icon {
+    font-size: 1.4rem;
+}
+
+.portal-user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.portal-user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e3c72;
+}
+
+.portal-user-id {
+    font-size: 0.7rem;
+    color: #666;
+}
+
+.portal-logout-btn {
+    background: #dc2626;
+    border: none;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.portal-logout-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .portal-header-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .portal-logos {
+        justify-content: center;
+    }
+}

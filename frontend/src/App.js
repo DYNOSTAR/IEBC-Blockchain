@@ -35,7 +35,7 @@ function App() {
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/verify" element={<VoterVerification />} />
                 <Route 
-                    path="/portal" 
+                    path="/portal/*" 
                     element={
                         <ProtectedRoute role="voter">
                             <VoterPortal />
