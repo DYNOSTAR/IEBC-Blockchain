@@ -1,0 +1,153 @@
+.admin-sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, #1E3C72 0%, #0D2137 100%);
+    color: white;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.admin-sidebar.collapsed {
+    width: 80px;
+}
+
+.sidebar-logo {
+    padding: 25px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+}
+
+.logo-icon {
+    font-size: 2rem;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.logo-subtitle {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.sidebar-nav {
+    padding: 0 10px;
+}
+
+.sidebar-menu-item {
+    width: 100%;
+    padding: 12px 15px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    position: relative;
+}
+
+.sidebar-menu-item:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.sidebar-menu-item.active {
+    background: #00A651;
+    color: white;
+}
+
+.menu-icon {
+    font-size: 1.2rem;
+    min-width: 24px;
+}
+
+.menu-label {
+    font-size: 0.9rem;
+}
+
+.menu-indicator {
+    position: absolute;
+    right: 10px;
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+}
+
+.sidebar-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.75rem;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #00A651;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.election-year {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+.admin-sidebar.collapsed .menu-label,
+.admin-sidebar.collapsed .logo-text,
+.admin-sidebar.collapsed .sidebar-footer {
+    display: none;
+}
+
+.admin-sidebar.collapsed .sidebar-menu-item {
+    justify-content: center;
+    padding: 12px;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.admin-sidebar::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: #00A651;
+    border-radius: 5px;
+}

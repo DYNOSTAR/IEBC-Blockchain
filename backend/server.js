@@ -5,6 +5,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const electionRoutes = require('./routes/electionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 const pool = require('./config/db');
 
 const app = express();
@@ -23,6 +24,8 @@ app.use('/api/elections', electionRoutes);
 
 // Admin routes - handles /api/admin/*
 app.use('/api/admin', adminRoutes);
+
+app.use('/api/super-admin', superAdminRoutes);
 
 // ============ ADD MISSING DIRECT ROUTES ============
 // Counties route (direct)
@@ -162,7 +165,5 @@ app.listen(PORT, () => {
     console.log(`   POST /api/auth/voter/login - Voter login`);
     console.log(`   POST /api/auth/verify-voter - Verify voter status`);
     console.log(`   GET  /api/elections/active - Get active election`);
-    console.log(`\n🔐 Test Credentials:`);
-    console.log(`   Admin: admin@iebc.or.ke / Admin@2027!`);
-    console.log(`   Voter: 12345678 / Voter@2027!`);
+  
 });

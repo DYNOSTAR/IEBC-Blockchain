@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/admin-login.css';
 
-const AdminLogin = () => {
+const SuperAdminLogin = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         nationalId: '',
@@ -25,25 +25,25 @@ const AdminLogin = () => {
         setLoading(true);
         setError('');
 
+        console.log('Attempting login with:', { nationalId: formData.nationalId });
+
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/admin/login', {
+            const response = await axios.post('http://localhost:5000/api/auth/super-admin/login', {
                 nationalId: formData.nationalId,
                 password: formData.password
             });
 
+            console.log('Response:', response.data);
+
             if (response.data.success) {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.admin));
-                localStorage.setItem('role', response.data.admin.role);
+                localStorage.setItem('role', 'super_admin');
                 
-                // Redirect based on role
-                if (response.data.admin.role === 'super_admin') {
-                    navigate('/super-admin/dashboard');
-                } else {
-                    navigate('/admin/dashboard');
-                }
+                navigate('/super-admin/dashboard');
             }
         } catch (err) {
+            console.error('Login error:', err.response?.data);
             setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
@@ -51,14 +51,13 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="admin-login-page">
+        <div className="super-admin-login-page">
             <div className="login-container">
                 <div className="login-card">
                     <div className="login-header">
-                        <div className="login-icon">🔐</div>
-                        <h1>Admin Portal</h1>
-                        <p>IEBC Election Management System</p>
-                        <div className="admin-badge">Authorized Personnel Only</div>
+                        <div className="login-icon">👑</div>
+                        <h1>Super Admin Portal</h1>
+                        <p>IEBC System Administration</p>
                     </div>
                     
                     <form onSubmit={handleSubmit}>
@@ -69,7 +68,8 @@ const AdminLogin = () => {
                                 name="nationalId"
                                 value={formData.nationalId}
                                 onChange={handleChange}
-                                placeholder="Enter your National ID"
+                                placeholder="SUPER001"
+                                autoComplete="off"
                                 required
                             />
                         </div>
@@ -82,6 +82,7 @@ const AdminLogin = () => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 placeholder="Enter your password"
+                                autoComplete="current-password"
                                 required
                             />
                         </div>
@@ -93,16 +94,13 @@ const AdminLogin = () => {
                         )}
                         
                         <button type="submit" className="login-btn" disabled={loading}>
-                            {loading ? 'Logging in...' : 'Access Admin Portal'}
+                            {loading ? 'Logging in...' : 'Access Super Admin Portal'}
                         </button>
                     </form>
                     
                     <div className="login-footer">
-                        <p>🔒 This area is restricted to authorized IEBC officials only</p>
-                        <p className="demo-note">
-                            Admin ID: ADMIN001 | Password: Admin@2027!<br/>
-                            Super Admin ID: SUPER001 | Password: Super@2027!
-                        </p>
+                        <p>🔒 Authorized Personnel Only</p>
+                        <p className="demo-note">Super Admin ID: SUPER001 | Password: Super@2027!</p>
                     </div>
                 </div>
             </div>
@@ -110,4 +108,4 @@ const AdminLogin = () => {
     );
 };
 
-export default AdminLogin;
+export default SuperAdminLogin;

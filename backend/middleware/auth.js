@@ -8,7 +8,7 @@ const authenticate = (req, res, next) => {
     }
     
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'test_secret_key');
         req.user = decoded;
         next();
     } catch (error) {
@@ -17,8 +17,15 @@ const authenticate = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
         return res.status(403).json({ error: 'Admin access required.' });
+    }
+    next();
+};
+
+const isSuperAdmin = (req, res, next) => {
+    if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ error: 'Super Admin access required.' });
     }
     next();
 };
@@ -30,4 +37,4 @@ const isVoter = (req, res, next) => {
     next();
 };
 
-module.exports = { authenticate, isAdmin, isVoter };
+module.exports = { authenticate, isAdmin, isSuperAdmin, isVoter };
