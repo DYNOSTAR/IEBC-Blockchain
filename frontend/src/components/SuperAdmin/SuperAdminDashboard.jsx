@@ -30,7 +30,6 @@ const SuperAdminDashboard = () => {
 
     const loadAdminData = async () => {
         try {
-            const token = localStorage.getItem('token');
             const userData = localStorage.getItem('user');
             if (userData) {
                 setAdminData(JSON.parse(userData));
