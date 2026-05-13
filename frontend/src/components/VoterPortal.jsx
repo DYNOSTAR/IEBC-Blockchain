@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import VoterPortalHeader from './VoterPortalHeader';
 import VerticalSidebar from './VerticalSidebar';
 import CivicEducation from './CivicEducation';
 import ReportCase from './ReportCase';
 import VotingComponent from './VotingComponent';
+import VoterProfile from './Voter/VoterProfile';
 import '../styles/voter-portal.css';
 
 const VoterPortal = () => {
@@ -25,59 +27,37 @@ const VoterPortal = () => {
         if (userData) {
             const parsedUser = JSON.parse(userData);
             setUser(parsedUser);
-            setVoter(parsedUser);
+            loadVoterDetails(parsedUser.id);
         }
-        setLoading(false);
     }, [navigate]);
+
+    const loadVoterDetails = async (userId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`http://localhost:5000/api/voter/details/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                setVoter(response.data.voter);
+            }
+        } catch (error) {
+            console.error('Error loading voter details:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogout = () => {
         localStorage.clear();
         navigate('/');
     };
 
-    const ProfilePage = () => (
-        <div className="portal-page-content">
-            <h2>👤 My Profile</h2>
-            <div className="profile-card">
-                <div className="profile-avatar">👤</div>
-                <div className="profile-info">
-                    <p><strong>Full Name:</strong> {voter?.firstName} {voter?.lastName}</p>
-                    <p><strong>National ID:</strong> {voter?.nationalId}</p>
-                    <p><strong>Voting Status:</strong> 
-                        <span className={voter?.hasVoted ? 'status-voted' : 'status-pending'}>
-                            {voter?.hasVoted ? '✓ Voted' : 'Not Voted Yet'}
-                        </span>
-                    </p>
-                    <p><strong>Registration Date:</strong> {new Date().toLocaleDateString()}</p>
-                </div>
-            </div>
-        </div>
-    );
-
-    const UpdateProfilePage = () => (
-        <div className="portal-page-content">
-            <h2>✏️ Update Profile</h2>
-            <div className="profile-edit-form">
-                <div className="form-group">
-                    <label>First Name</label>
-                    <input type="text" defaultValue={voter?.firstName} placeholder="Enter first name" />
-                </div>
-                <div className="form-group">
-                    <label>Last Name</label>
-                    <input type="text" defaultValue={voter?.lastName} placeholder="Enter last name" />
-                </div>
-                <div className="form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" placeholder="Enter your phone number" />
-                </div>
-                <div className="form-group">
-                    <label>Email Address</label>
-                    <input type="email" placeholder="Enter your email address" />
-                </div>
-                <button className="update-btn">Save Changes</button>
-            </div>
-        </div>
-    );
+    const handleProfileUpdate = () => {
+        // Reload voter details after profile update
+        if (user?.id) {
+            loadVoterDetails(user.id);
+        }
+    };
 
     const ResultsPage = () => (
         <div className="portal-page-content">
@@ -105,11 +85,11 @@ const VoterPortal = () => {
                 <VerticalSidebar />
                 <div className="portal-content-area">
                     <Routes>
-                        <Route path="/" element={<ProfilePage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/" element={<VoterProfile voter={voter} onUpdate={handleProfileUpdate} />} />
+                        <Route path="/profile" element={<VoterProfile voter={voter} onUpdate={handleProfileUpdate} />} />
                         <Route path="/education" element={<CivicEducation />} />
-                        <Route path="/voting" element={<VotingComponent />} />
-                        <Route path="/update-profile" element={<UpdateProfilePage />} />
+                        <Route path="/voting" element={<VotingComponent voter={voter} />} />
+                        <Route path="/update-profile" element={<VoterProfile voter={voter} onUpdate={handleProfileUpdate} />} />
                         <Route path="/report" element={<ReportCase />} />
                         <Route path="/results" element={<ResultsPage />} />
                     </Routes>

@@ -6,15 +6,17 @@ const authRoutes = require('./routes/authRoutes');
 const electionRoutes = require('./routes/electionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
-const pool = require('./config/db');
+const locationRoutes = require('./routes/locationRoutes');
 
+const pool = require('./config/db');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ============ REGISTER ALL ROUTES ============
 // Auth routes - handles /api/auth/register, /api/auth/voter/login, /api/auth/verify-voter, /api/auth/counties, etc.
 app.use('/api/auth', authRoutes);
@@ -26,6 +28,8 @@ app.use('/api/elections', electionRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use('/api/super-admin', superAdminRoutes);
+
+app.use('/api/locations', locationRoutes);
 
 // ============ ADD MISSING DIRECT ROUTES ============
 // Counties route (direct)

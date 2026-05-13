@@ -464,6 +464,116 @@ router.get('/polling-stations/:wardId', async (req, res) => {
     }
 });
 
+// ============ VOTER REGISTRATION (Fixed) ============
+router.post('/register', async (req, res) => {
+    const { 
+        nationalId, firstName, lastName, email, phone, 
+        countyId, constituencyId, wardId, 
+        password 
+    } = req.body;
+    
+    console.log('Registration attempt:', { nationalId, firstName, lastName, email, countyId, constituencyId, wardId });
+    
+    // Validate required fields
+    if (!nationalId || !firstName || !lastName || !password) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'National ID, First Name, Last Name, and Password are required' 
+        });
+    }
+    
+    try {
+        // Check if national ID already exists in users table
+        const existingUser = await pool.query(
+            'SELECT id FROM users WHERE national_id = $1',
+            [nationalId]
+        );
+        
+        if (existingUser.rows.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'National ID already registered. Please login.' 
+            });
+        }
+        
+        // Check if email already exists (if provided)
+        if (email) {
+            const existingEmail = await pool.query(
+                'SELECT id FROM users WHERE email = $1',
+                [email]
+            );
+            if (existingEmail.rows.length > 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Email already registered. Please use a different email.' 
+                });
+            }
+        }
+        
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        
+        // Create user
+        const userResult = await pool.query(
+            `INSERT INTO users (national_id, first_name, last_name, email, phone, password_hash, role, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id`,
+            [nationalId, firstName, lastName, email || null, phone || null, hashedPassword, 'voter', true]
+        );
+        
+        const userId = userResult.rows[0].id;
+        console.log('User created with ID:', userId);
+        
+        // Create voter record with location (explicitly include national_id)
+        const voterResult = await pool.query(
+            `INSERT INTO voters (user_id, national_id, county_id, constituency_id, ward_id, has_voted)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id`,
+            [userId, nationalId, countyId || null, constituencyId || null, wardId || null, false]
+        );
+        
+        console.log('Voter record created with ID:', voterResult.rows[0].id);
+        
+        // Log registration
+        await pool.query(
+            `INSERT INTO audit_logs (user_id, action, details)
+             VALUES ($1, $2, $3)`,
+            [userId, 'REGISTRATION', `Voter ${nationalId} (${firstName} ${lastName}) registered`]
+        );
+        
+        console.log('Registration successful for:', nationalId);
+        
+        // Generate token for auto-login
+        const token = jwt.sign(
+            { id: userId, role: 'voter', nationalId: nationalId },
+            process.env.JWT_SECRET || 'test_secret_key',
+            { expiresIn: '24h' }
+        );
+        
+        res.json({
+            success: true,
+            message: 'Registration successful!',
+            token: token,
+            voter: {
+                id: userId,
+                nationalId: nationalId,
+                firstName: firstName,
+                lastName: lastName,
+                email: email || '',
+                hasVoted: false
+            }
+        });
+        
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Registration failed: ' + error.message 
+        });
+    }
+});
+
 // ============ TEST ROUTE ============
 router.get('/test', (req, res) => {
     res.json({ message: 'Auth routes are working!' });

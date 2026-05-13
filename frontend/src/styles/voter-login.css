@@ -164,3 +164,38 @@
         padding: 25px;
     }
 }
+/* Password input wrapper */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    flex: 1;
+    padding-right: 45px;
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-password-btn:hover {
+    background: #f0f0f0;
+}
+
+.demo-note {
+    font-size: 0.7rem;
+    color: #00A651;
+    margin-top: 10px;
+}

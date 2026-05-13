@@ -48,7 +48,7 @@ const LandingPage = () => {
                     <div className="hero-content">
                         <div className="hero-badge">
                             <span className="badge-icon">⛓️</span>
-                            <span>Blockchain Secured Elections 2027</span>
+                            <span>Kenya's Blockchain Secured Elections</span>
                         </div>
                         <h1 className="hero-title">
                             Your Vote,
@@ -56,7 +56,7 @@ const LandingPage = () => {
                             <span className="highlight">Your Future</span>
                         </h1>
                         <p className="hero-description">
-                            Experience transparent, verifiable, and tamper-proof voting for the 2027 General Election.
+                            Experience transparent, verifiable, and tamper-proof voting.
                             Every vote recorded on an immutable blockchain ledger.
                         </p>
                         <div className="hero-buttons">
@@ -65,9 +65,6 @@ const LandingPage = () => {
                             </button>
                             <button onClick={() => navigate('/register')} className="btn-register-large">
                                 <span>📝</span> Register to Vote
-                            </button>
-                            <button onClick={() => navigate('/verify')} className="btn-secondary-large">
-                                Verify Status
                             </button>
                         </div>
                     </div>

@@ -5,6 +5,7 @@ import '../styles/voter-login.css';
 
 const VoterLogin = () => {
     const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         nationalId: '',
         password: ''
@@ -81,15 +82,24 @@ const VoterLogin = () => {
                         
                         <div className="form-group">
                             <label>Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="Enter your password"
-                                autoComplete="current-password"
-                                required
-                            />
+                            <div className="password-input-wrapper">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="Enter your password"
+                                    autoComplete="current-password"
+                                    required
+                                />
+                                <button 
+                                    type="button"
+                                    className="toggle-password-btn"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? '🙈' : '👁️'}
+                                </button>
+                            </div>
                         </div>
                         
                         {error && (
@@ -117,6 +127,7 @@ const VoterLogin = () => {
                     
                     <div className="login-footer">
                         <p>Need help? Contact IEBC helpline: 0700-111-111</p>
+                        <p className="demo-note">Demo: National ID: 12345678 | Password: Voter@2027!</p>
                     </div>
                 </div>
             </div>

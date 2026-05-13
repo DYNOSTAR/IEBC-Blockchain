@@ -1,20 +1,90 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/registration.css';
 
 const VoterRegistration = () => {
     const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    
+    // Data from database
+    const [counties, setCounties] = useState([]);
+    const [constituencies, setConstituencies] = useState([]);
+    const [wards, setWards] = useState([]);
+    
     const [formData, setFormData] = useState({
         nationalId: '',
         firstName: '',
         lastName: '',
+        email: '',
+        phone: '',
+        countyId: '',
+        constituencyId: '',
+        wardId: '',
         password: '',
         confirmPassword: ''
     });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+
+    // Load counties on component mount
+    useEffect(() => {
+        loadCounties();
+    }, []);
+
+    // Load constituencies when county changes
+    useEffect(() => {
+        if (formData.countyId) {
+            loadConstituencies(formData.countyId);
+            // Reset dependent fields
+            setFormData(prev => ({ ...prev, constituencyId: '', wardId: '' }));
+            setWards([]);
+        }
+    }, [formData.countyId]);
+
+    // Load wards when constituency changes
+    useEffect(() => {
+        if (formData.constituencyId) {
+            loadWards(formData.constituencyId);
+            setFormData(prev => ({ ...prev, wardId: '' }));
+        }
+    }, [formData.constituencyId]);
+
+    const loadCounties = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/api/locations/counties');
+            if (response.data.success) {
+                setCounties(response.data.counties);
+            }
+        } catch (error) {
+            console.error('Error loading counties:', error);
+            setError('Failed to load county data. Please refresh the page.');
+        }
+    };
+
+    const loadConstituencies = async (countyId) => {
+        try {
+            const response = await axios.get(`http://localhost:5000/api/locations/constituencies/${countyId}`);
+            if (response.data.success) {
+                setConstituencies(response.data.constituencies);
+            }
+        } catch (error) {
+            console.error('Error loading constituencies:', error);
+        }
+    };
+
+    const loadWards = async (constituencyId) => {
+        try {
+            const response = await axios.get(`http://localhost:5000/api/locations/wards/${constituencyId}`);
+            if (response.data.success) {
+                setWards(response.data.wards);
+            }
+        } catch (error) {
+            console.error('Error loading wards:', error);
+        }
+    };
 
     const handleChange = (e) => {
         setFormData({
@@ -50,16 +120,29 @@ const VoterRegistration = () => {
                 nationalId: formData.nationalId,
                 firstName: formData.firstName,
                 lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                countyId: formData.countyId,
+                constituencyId: formData.constituencyId,
+                wardId: formData.wardId,
                 password: formData.password
             });
             
             if (response.data.success) {
-                setSuccess('Registration successful! You can now login.');
+                // Store token and user data for auto-login
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.voter));
+                localStorage.setItem('role', 'voter');
+                
+                setSuccess('Registration successful! Redirecting to your portal...');
+                
+                // Redirect to voter portal after 1.5 seconds
                 setTimeout(() => {
-                    navigate('/login');
-                }, 2000);
+                    navigate('/portal');
+                }, 1500);
             }
         } catch (err) {
+            console.error('Registration error:', err);
             setError(err.response?.data?.error || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
@@ -71,9 +154,9 @@ const VoterRegistration = () => {
             <div className="registration-container">
                 <div className="registration-card">
                     <div className="registration-header">
-                        <div className="registration-icon">📝</div>
+                        <div className="registration-icon">📱</div>
                         <h1>Voter Registration</h1>
-                        <p>Create your voting account</p>
+                        <p>Create your mobile voting account</p>
                     </div>
                     
                     {success && (
@@ -89,19 +172,6 @@ const VoterRegistration = () => {
                     )}
                     
                     <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label>National ID Number *</label>
-                            <input
-                                type="text"
-                                name="nationalId"
-                                value={formData.nationalId}
-                                onChange={handleChange}
-                                placeholder="e.g., 12345678"
-                                autoComplete="off"
-                                required
-                            />
-                        </div>
-                        
                         <div className="form-row">
                             <div className="form-group">
                                 <label>First Name *</label>
@@ -111,7 +181,6 @@ const VoterRegistration = () => {
                                     value={formData.firstName}
                                     onChange={handleChange}
                                     placeholder="Your first name"
-                                    autoComplete="off"
                                     required
                                 />
                             </div>
@@ -123,36 +192,136 @@ const VoterRegistration = () => {
                                     value={formData.lastName}
                                     onChange={handleChange}
                                     placeholder="Your last name"
-                                    autoComplete="off"
                                     required
                                 />
                             </div>
                         </div>
-                        
+
+                        <div className="form-group">
+                            <label>National ID Number *</label>
+                            <input
+                                type="text"
+                                name="nationalId"
+                                value={formData.nationalId}
+                                onChange={handleChange}
+                                placeholder="e.g., 12345678"
+                                required
+                            />
+                        </div>
+
                         <div className="form-row">
                             <div className="form-group">
-                                <label>Password *</label>
+                                <label>Email Address</label>
                                 <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
                                     onChange={handleChange}
-                                    placeholder="Min. 6 characters"
-                                    autoComplete="new-password"
-                                    required
+                                    placeholder="your@email.com"
                                 />
                             </div>
                             <div className="form-group">
-                                <label>Confirm Password *</label>
+                                <label>Phone Number</label>
                                 <input
-                                    type="password"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
+                                    type="tel"
+                                    name="phone"
+                                    value={formData.phone}
                                     onChange={handleChange}
-                                    placeholder="Confirm your password"
-                                    autoComplete="new-password"
-                                    required
+                                    placeholder="0712345678"
                                 />
+                            </div>
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>County *</label>
+                                <select
+                                    name="countyId"
+                                    value={formData.countyId}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="">Select County</option>
+                                    {counties.map(county => (
+                                        <option key={county.id} value={county.id}>{county.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Constituency *</label>
+                                <select
+                                    name="constituencyId"
+                                    value={formData.constituencyId}
+                                    onChange={handleChange}
+                                    disabled={!formData.countyId}
+                                    required
+                                >
+                                    <option value="">Select Constituency</option>
+                                    {constituencies.map(con => (
+                                        <option key={con.id} value={con.id}>{con.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Ward *</label>
+                                <select
+                                    name="wardId"
+                                    value={formData.wardId}
+                                    onChange={handleChange}
+                                    disabled={!formData.constituencyId}
+                                    required
+                                >
+                                    <option value="">Select Ward</option>
+                                    {wards.map(ward => (
+                                        <option key={ward.id} value={ward.id}>{ward.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Password *</label>
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="Min. 6 characters"
+                                        required
+                                    />
+                                    <button 
+                                        type="button"
+                                        className="toggle-password-btn"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? '🙈' : '👁️'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Confirm Password *</label>
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        placeholder="Confirm your password"
+                                        required
+                                    />
+                                    <button 
+                                        type="button"
+                                        className="toggle-password-btn"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    >
+                                        {showConfirmPassword ? '🙈' : '👁️'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
