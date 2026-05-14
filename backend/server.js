@@ -7,6 +7,7 @@ const electionRoutes = require('./routes/electionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const voterRoutes = require('./routes/voterRoutes');
 
 const pool = require('./config/db');
 const path = require('path');
@@ -23,7 +24,7 @@ app.use('/api/auth', authRoutes);
 
 // Election routes - handles /api/elections/active, /api/elections/:id/positions, etc.
 app.use('/api/elections', electionRoutes);
-
+app.use('/api/voter', voterRoutes);
 // Admin routes - handles /api/admin/*
 app.use('/api/admin', adminRoutes);
 

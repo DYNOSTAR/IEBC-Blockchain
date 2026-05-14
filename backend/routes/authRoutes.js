@@ -148,7 +148,8 @@ router.post('/voter/login', async (req, res) => {
             success: true,
             token,
             voter: {
-                id: voter.voter_id,
+                id: voter.user_id,
+                userId: voter.user_id,
                 nationalId: voter.national_id,
                 firstName: voter.first_name,
                 lastName: voter.last_name,
@@ -464,7 +465,7 @@ router.get('/polling-stations/:wardId', async (req, res) => {
     }
 });
 
-// ============ VOTER REGISTRATION (Fixed) ============
+// ============ VOTER REGISTRATION (Complete) ============
 router.post('/register', async (req, res) => {
     const { 
         nationalId, firstName, lastName, email, phone, 
@@ -472,18 +473,13 @@ router.post('/register', async (req, res) => {
         password 
     } = req.body;
     
-    console.log('Registration attempt:', { nationalId, firstName, lastName, email, countyId, constituencyId, wardId });
-    
-    // Validate required fields
-    if (!nationalId || !firstName || !lastName || !password) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'National ID, First Name, Last Name, and Password are required' 
-        });
-    }
+    console.log('Registration attempt:', { 
+        nationalId, firstName, lastName, email, phone, 
+        countyId, constituencyId, wardId 
+    });
     
     try {
-        // Check if national ID already exists in users table
+        // Check if national ID already exists
         const existingUser = await pool.query(
             'SELECT id FROM users WHERE national_id = $1',
             [nationalId]
@@ -494,20 +490,6 @@ router.post('/register', async (req, res) => {
                 success: false, 
                 error: 'National ID already registered. Please login.' 
             });
-        }
-        
-        // Check if email already exists (if provided)
-        if (email) {
-            const existingEmail = await pool.query(
-                'SELECT id FROM users WHERE email = $1',
-                [email]
-            );
-            if (existingEmail.rows.length > 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'Email already registered. Please use a different email.' 
-                });
-            }
         }
         
         // Hash password
@@ -523,17 +505,13 @@ router.post('/register', async (req, res) => {
         );
         
         const userId = userResult.rows[0].id;
-        console.log('User created with ID:', userId);
         
-        // Create voter record with location (explicitly include national_id)
-        const voterResult = await pool.query(
+        // Create voter record with ALL location data
+        await pool.query(
             `INSERT INTO voters (user_id, national_id, county_id, constituency_id, ward_id, has_voted)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING id`,
-            [userId, nationalId, countyId || null, constituencyId || null, wardId || null, false]
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [userId, nationalId, countyId, constituencyId, wardId, false]
         );
-        
-        console.log('Voter record created with ID:', voterResult.rows[0].id);
         
         // Log registration
         await pool.query(
@@ -543,6 +521,24 @@ router.post('/register', async (req, res) => {
         );
         
         console.log('Registration successful for:', nationalId);
+        
+        // Fetch complete voter data to return
+        const completeVoter = await pool.query(`
+            SELECT 
+                u.id, u.national_id, u.first_name, u.last_name, u.email, u.phone,
+                v.county_id, v.constituency_id, v.ward_id, v.has_voted,
+                c.name as county_name,
+                con.name as constituency_name,
+                w.name as ward_name
+            FROM users u
+            LEFT JOIN voters v ON u.id = v.user_id
+            LEFT JOIN counties c ON v.county_id = c.id
+            LEFT JOIN constituencies con ON v.constituency_id = con.id
+            LEFT JOIN wards w ON v.ward_id = w.id
+            WHERE u.id = $1
+        `, [userId]);
+        
+        const voter = completeVoter.rows[0];
         
         // Generate token for auto-login
         const token = jwt.sign(
@@ -556,12 +552,19 @@ router.post('/register', async (req, res) => {
             message: 'Registration successful!',
             token: token,
             voter: {
-                id: userId,
-                nationalId: nationalId,
-                firstName: firstName,
-                lastName: lastName,
-                email: email || '',
-                hasVoted: false
+                id: voter.id,
+                nationalId: voter.national_id,
+                firstName: voter.first_name,
+                lastName: voter.last_name,
+                email: voter.email,
+                phone: voter.phone,
+                countyId: voter.county_id,
+                countyName: voter.county_name,
+                constituencyId: voter.constituency_id,
+                constituencyName: voter.constituency_name,
+                wardId: voter.ward_id,
+                wardName: voter.ward_name,
+                hasVoted: voter.has_voted || false
             }
         });
         
@@ -573,7 +576,6 @@ router.post('/register', async (req, res) => {
         });
     }
 });
-
 // ============ TEST ROUTE ============
 router.get('/test', (req, res) => {
     res.json({ message: 'Auth routes are working!' });

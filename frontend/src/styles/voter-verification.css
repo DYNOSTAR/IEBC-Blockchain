@@ -1,0 +1,153 @@
+.voter-verification-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.verification-container {
+    max-width: 500px;
+    width: 100%;
+}
+
+.verification-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.verification-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.verification-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.verification-header h1 {
+    font-size: 1.8rem;
+    color: #1E3C72;
+    margin-bottom: 10px;
+}
+
+.verification-header p {
+    color: #666;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #00A651;
+}
+
+.verify-btn {
+    width: 100%;
+    padding: 14px;
+    background: #00A651;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.verify-btn:hover {
+    background: #008a3e;
+    transform: translateY(-2px);
+}
+
+.verify-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.error-message {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.verification-result {
+    margin-top: 25px;
+    padding: 20px;
+    background: #d1fae5;
+    border-radius: 10px;
+    border-left: 4px solid #00A651;
+}
+
+.verification-result h3 {
+    color: #065f46;
+    margin-bottom: 15px;
+}
+
+.result-details p {
+    margin-bottom: 8px;
+}
+
+.result-details strong {
+    color: #065f46;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    background: #00A651;
+    color: white;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.verification-footer {
+    text-align: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.verification-footer button {
+    background: none;
+    border: none;
+    color: #00A651;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .verification-card {
+        padding: 25px;
+    }
+    
+    .verification-header h1 {
+        font-size: 1.5rem;
+    }
+}

@@ -9,8 +9,6 @@ const Header = ({ user, onLogout }) => {
     
     const navItems = [
         { path: '/', label: 'Home' },
-        { path: '/verify', label: 'Verify Status' },
-        { path: '/results', label: 'Results' }
     ];
     
     return (

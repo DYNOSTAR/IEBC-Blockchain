@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import VoterPortalHeader from './VoterPortalHeader';
 import VerticalSidebar from './VerticalSidebar';
@@ -7,41 +7,69 @@ import CivicEducation from './CivicEducation';
 import ReportCase from './ReportCase';
 import VotingComponent from './VotingComponent';
 import VoterProfile from './Voter/VoterProfile';
+import VerificationPage from './Voter/VerificationPage';
+import ResultsPage from './ResultsPage';
 import '../styles/voter-portal.css';
 
 const VoterPortal = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState(null);
     const [voter, setVoter] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
         
         if (!token) {
             navigate('/login');
             return;
         }
         
-        if (userData) {
-            const parsedUser = JSON.parse(userData);
-            setUser(parsedUser);
-            loadVoterDetails(parsedUser.id);
-        }
+        fetchVoterData();
     }, [navigate]);
 
-    const loadVoterDetails = async (userId) => {
+    const fetchVoterData = async () => {
         try {
             const token = localStorage.getItem('token');
+            let userId = localStorage.getItem('userId');
+            
+            if (!userId) {
+                const userData = localStorage.getItem('user');
+                if (userData) {
+                    const parsed = JSON.parse(userData);
+                    userId = parsed.userId || parsed.id;
+                    if (userId) localStorage.setItem('userId', userId);
+                    setUser(parsed);
+                }
+            } else {
+                const userData = localStorage.getItem('user');
+                if (userData) setUser(JSON.parse(userData));
+            }
+            
+            console.log('Fetching voter data for userId:', userId);
+            
+            if (!userId) {
+                setError('User ID not found. Please login again.');
+                setLoading(false);
+                return;
+            }
+            
             const response = await axios.get(`http://localhost:5000/api/voter/details/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            
+            console.log('Voter details response:', response.data);
+            
             if (response.data.success) {
                 setVoter(response.data.voter);
+            } else {
+                setError('Failed to load voter data');
             }
-        } catch (error) {
-            console.error('Error loading voter details:', error);
+        } catch (err) {
+            console.error('Error fetching voter:', err);
+            setError(err.response?.data?.error || 'Failed to load voter data');
         } finally {
             setLoading(false);
         }
@@ -53,29 +81,57 @@ const VoterPortal = () => {
     };
 
     const handleProfileUpdate = () => {
-        // Reload voter details after profile update
-        if (user?.id) {
-            loadVoterDetails(user.id);
+        fetchVoterData();
+    };
+
+    const getActiveComponent = () => {
+        const path = location.pathname;
+        if (path.includes('/profile') || path === '/portal') return 'profile';
+        if (path.includes('/education')) return 'education';
+        if (path.includes('/voting')) return 'voting';
+        if (path.includes('/report')) return 'report';
+        if (path.includes('/results')) return 'results';
+        if (path.includes('/verify')) return 'verify';
+        return 'profile';
+    };
+
+    const renderComponent = () => {
+        switch (getActiveComponent()) {
+            case 'profile':
+                return <VoterProfile voter={voter} onUpdate={handleProfileUpdate} />;
+            case 'education':
+                return <CivicEducation />;
+            case 'voting':
+                return <VotingComponent voter={voter} />;
+            case 'report':
+                return <ReportCase />;
+            case 'results':
+                return <ResultsPage />;
+            case 'verify':
+                return <VerificationPage voter={voter} onComplete={handleProfileUpdate} />;
+            default:
+                return <VoterProfile voter={voter} onUpdate={handleProfileUpdate} />;
         }
     };
 
-    const ResultsPage = () => (
-        <div className="portal-page-content">
-            <h2>📊 Election Results</h2>
-            <div className="results-card">
-                <div className="results-placeholder">
-                    <div className="placeholder-icon">🗳️</div>
-                    <p>Live results will appear here after voting begins</p>
-                    <button onClick={() => navigate('/results')} className="view-full-results">
-                        View Full Results →
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
     if (loading) {
-        return <div className="portal-loading"><div className="spinner"></div><p>Loading your portal...</p></div>;
+        return (
+            <div className="portal-loading">
+                <div className="spinner"></div>
+                <p>Loading your portal...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="portal-error">
+                <div className="error-icon">⚠️</div>
+                <h2>Something went wrong</h2>
+                <p>{error}</p>
+                <button onClick={() => navigate('/login')}>Go to Login</button>
+            </div>
+        );
     }
 
     return (
@@ -84,15 +140,7 @@ const VoterPortal = () => {
             <div className="portal-main-layout">
                 <VerticalSidebar />
                 <div className="portal-content-area">
-                    <Routes>
-                        <Route path="/" element={<VoterProfile voter={voter} onUpdate={handleProfileUpdate} />} />
-                        <Route path="/profile" element={<VoterProfile voter={voter} onUpdate={handleProfileUpdate} />} />
-                        <Route path="/education" element={<CivicEducation />} />
-                        <Route path="/voting" element={<VotingComponent voter={voter} />} />
-                        <Route path="/update-profile" element={<VoterProfile voter={voter} onUpdate={handleProfileUpdate} />} />
-                        <Route path="/report" element={<ReportCase />} />
-                        <Route path="/results" element={<ResultsPage />} />
-                    </Routes>
+                    {renderComponent()}
                 </div>
             </div>
         </div>
