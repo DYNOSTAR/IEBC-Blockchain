@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import logo from '../assets/logo.png';
 import '../styles/admin-login.css';
 
 const AdminRegister = () => {
     const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formData, setFormData] = useState({
         nationalId: '',
         firstName: '',
@@ -75,8 +78,10 @@ const AdminRegister = () => {
         <div className="admin-login-page">
             <div className="login-container">
                 <div className="login-card">
+                    <div className="login-logo">
+                        <img src={logo} alt="IEBC Logo" className="logo-img" />
+                    </div>
                     <div className="login-header">
-                        <div className="login-icon">🔐</div>
                         <h1>Admin Registration</h1>
                         <p>Create Administrator Account</p>
                         <div className="admin-badge">Authorized by Super Admin</div>
@@ -181,25 +186,43 @@ const AdminRegister = () => {
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Password *</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Min. 6 characters"
-                                    required
-                                />
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="Min. 6 characters"
+                                        required
+                                    />
+                                    <button 
+                                        type="button"
+                                        className="toggle-password-btn"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? '🙈' : '👁️'}
+                                    </button>
+                                </div>
                             </div>
                             <div className="form-group">
                                 <label>Confirm Password *</label>
-                                <input
-                                    type="password"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    placeholder="Confirm password"
-                                    required
-                                />
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        placeholder="Confirm password"
+                                        required
+                                    />
+                                    <button 
+                                        type="button"
+                                        className="toggle-password-btn"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    >
+                                        {showConfirmPassword ? '🙈' : '👁️'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         

@@ -465,21 +465,14 @@ router.get('/polling-stations/:wardId', async (req, res) => {
     }
 });
 
-// ============ VOTER REGISTRATION (Complete) ============
+// ============ VOTER REGISTRATION (Creates both user and voter records) ============
 router.post('/register', async (req, res) => {
-    const { 
-        nationalId, firstName, lastName, email, phone, 
-        countyId, constituencyId, wardId, 
-        password 
-    } = req.body;
+    const { nationalId, firstName, lastName, email, phone, countyId, constituencyId, wardId, password } = req.body;
     
-    console.log('Registration attempt:', { 
-        nationalId, firstName, lastName, email, phone, 
-        countyId, constituencyId, wardId 
-    });
+    console.log('Voter registration attempt:', { nationalId, firstName, lastName });
     
     try {
-        // Check if national ID already exists
+        // Check if national ID already exists in users table
         const existingUser = await pool.query(
             'SELECT id FROM users WHERE national_id = $1',
             [nationalId]
@@ -496,7 +489,7 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         
-        // Create user
+        // Create user account (role = 'voter')
         const userResult = await pool.query(
             `INSERT INTO users (national_id, first_name, last_name, email, phone, password_hash, role, is_active)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -506,11 +499,11 @@ router.post('/register', async (req, res) => {
         
         const userId = userResult.rows[0].id;
         
-        // Create voter record with ALL location data
+        // Create voter record (linked to user)
         await pool.query(
-            `INSERT INTO voters (user_id, national_id, county_id, constituency_id, ward_id, has_voted)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [userId, nationalId, countyId, constituencyId, wardId, false]
+            `INSERT INTO voters (user_id, national_id, county_id, constituency_id, ward_id, has_voted, registered_at)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+            [userId, nationalId, countyId || null, constituencyId || null, wardId || null, false]
         );
         
         // Log registration
@@ -520,25 +513,7 @@ router.post('/register', async (req, res) => {
             [userId, 'REGISTRATION', `Voter ${nationalId} (${firstName} ${lastName}) registered`]
         );
         
-        console.log('Registration successful for:', nationalId);
-        
-        // Fetch complete voter data to return
-        const completeVoter = await pool.query(`
-            SELECT 
-                u.id, u.national_id, u.first_name, u.last_name, u.email, u.phone,
-                v.county_id, v.constituency_id, v.ward_id, v.has_voted,
-                c.name as county_name,
-                con.name as constituency_name,
-                w.name as ward_name
-            FROM users u
-            LEFT JOIN voters v ON u.id = v.user_id
-            LEFT JOIN counties c ON v.county_id = c.id
-            LEFT JOIN constituencies con ON v.constituency_id = con.id
-            LEFT JOIN wards w ON v.ward_id = w.id
-            WHERE u.id = $1
-        `, [userId]);
-        
-        const voter = completeVoter.rows[0];
+        console.log('Voter registration successful for:', nationalId);
         
         // Generate token for auto-login
         const token = jwt.sign(
@@ -552,19 +527,13 @@ router.post('/register', async (req, res) => {
             message: 'Registration successful!',
             token: token,
             voter: {
-                id: voter.id,
-                nationalId: voter.national_id,
-                firstName: voter.first_name,
-                lastName: voter.last_name,
-                email: voter.email,
-                phone: voter.phone,
-                countyId: voter.county_id,
-                countyName: voter.county_name,
-                constituencyId: voter.constituency_id,
-                constituencyName: voter.constituency_name,
-                wardId: voter.ward_id,
-                wardName: voter.ward_name,
-                hasVoted: voter.has_voted || false
+                id: userId,
+                nationalId: nationalId,
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                phone: phone,
+                hasVoted: false
             }
         });
         

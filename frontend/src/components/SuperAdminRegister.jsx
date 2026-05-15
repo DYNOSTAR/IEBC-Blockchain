@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import logo from '../assets/logo.png';
 import '../styles/admin-login.css';
 
 const SuperAdminRegister = () => {
@@ -76,8 +77,11 @@ const SuperAdminRegister = () => {
         <div className="admin-login-page">
             <div className="login-container">
                 <div className="login-card">
+                    <div className="login-logo">
+                        <img src={logo} alt="IEBC Logo" className="logo-img" />
+                    </div>
                     <div className="login-header">
-                        <div className="login-icon">👑</div>
+                        <div className="login-icon"></div>
                         <h1>Super Admin Registration</h1>
                         <p>Create Super Administrator Account</p>
                         <div className="admin-badge">First Time Setup</div>

@@ -31,7 +31,7 @@ const SuperAdminHeader = ({ admin, onLogout, onToggleSidebar, sidebarCollapsed }
             
             <div className="header-right">
                 <div className="admin-info">
-                    <div className="admin-avatar">👑</div>
+                    
                     <div className="admin-details">
                         <span className="admin-name">{admin?.name || admin?.first_name + ' ' + admin?.last_name}</span>
                         <span className="admin-role">Super Administrator</span>

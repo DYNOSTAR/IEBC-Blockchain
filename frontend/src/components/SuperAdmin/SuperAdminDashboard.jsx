@@ -113,7 +113,7 @@ const SuperAdminDashboard = () => {
                 {/* Welcome Section with Admin Data */}
                 <div className="welcome-section">
                     <div className="admin-profile-card">
-                        <div className="admin-profile-icon">👑</div>
+
                         <div className="admin-profile-info">
                             <h2>Welcome back, {adminData?.name || adminData?.firstName} {adminData?.lastName}!</h2>
                             <p>Super Administrator - Full System Access</p>

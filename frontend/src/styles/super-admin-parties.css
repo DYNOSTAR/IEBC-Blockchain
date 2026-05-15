@@ -1,0 +1,410 @@
+.super-admin-parties-page {
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.page-header h1 {
+    font-size: 1.5rem;
+    color: #1E3C72;
+    margin-bottom: 5px;
+}
+
+.page-header p {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.add-btn {
+    background: #00A651;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.stats-summary {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: linear-gradient(135deg, #1E3C72, #2A5298);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 12px;
+    min-width: 150px;
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.data-table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 30px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.data-table th {
+    background: #F8F9FA;
+    font-weight: 600;
+    color: #1E3C72;
+}
+
+.symbol-cell {
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.party-code {
+    font-family: monospace;
+    font-weight: 600;
+    background: #F0FDF4;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+}
+
+.slogan-cell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.active {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-badge.inactive {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.edit-btn, .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 5px;
+    margin: 0 3px;
+}
+
+.edit-btn:hover {
+    background: #E2E8F0;
+    border-radius: 5px;
+}
+
+.delete-btn:hover {
+    background: #FEE2E2;
+    border-radius: 5px;
+    color: #DC2626;
+}
+
+/* Party Cards View */
+.parties-cards-view {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.parties-cards-view h3 {
+    color: #1E3C72;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.parties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.party-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    border-top: 4px solid;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.party-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.party-card-header {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #F8F9FA;
+}
+
+.party-symbol {
+    font-size: 2.5rem;
+}
+
+.party-info {
+    flex: 1;
+}
+
+.party-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1E3C72;
+}
+
+.party-code-badge {
+    font-size: 0.7rem;
+    color: #00A651;
+    background: #F0FDF4;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 5px;
+}
+
+.party-card-body {
+    padding: 15px;
+}
+
+.party-slogan {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.party-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.party-details span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.party-card-footer {
+    padding: 12px 15px;
+    background: #F8F9FA;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #E2E8F0;
+}
+
+.candidate-count {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.error-message {
+    background: #FEE2E2;
+    color: #DC2626;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 15px;
+    max-width: 90%;
+    padding: 25px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content.large {
+    width: 700px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1E3C72;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+
+.color-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-input-wrapper input {
+    width: 60px;
+    height: 40px;
+    padding: 0;
+}
+
+.color-value {
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #E2E8F0;
+}
+
+.cancel-btn {
+    background: #E2E8F0;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.submit-btn {
+    background: #00A651;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .stats-summary {
+        justify-content: center;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .parties-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .data-table-container {
+        font-size: 0.75rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 8px 5px;
+    }
+    
+    .symbol-cell {
+        font-size: 1rem;
+    }
+}

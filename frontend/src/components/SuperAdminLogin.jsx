@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import logo from '../assets/logo.png';
 import '../styles/admin-login.css';
 
 const SuperAdminLogin = () => {
     const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         nationalId: '',
         password: ''
@@ -25,15 +27,11 @@ const SuperAdminLogin = () => {
         setLoading(true);
         setError('');
 
-        console.log('Attempting login with:', { nationalId: formData.nationalId });
-
         try {
             const response = await axios.post('http://localhost:5000/api/auth/super-admin/login', {
                 nationalId: formData.nationalId,
                 password: formData.password
             });
-
-            console.log('Response:', response.data);
 
             if (response.data.success) {
                 localStorage.setItem('token', response.data.token);
@@ -43,7 +41,6 @@ const SuperAdminLogin = () => {
                 navigate('/super-admin/dashboard');
             }
         } catch (err) {
-            console.error('Login error:', err.response?.data);
             setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
@@ -51,11 +48,14 @@ const SuperAdminLogin = () => {
     };
 
     return (
-        <div className="super-admin-login-page">
+        <div className="admin-login-page">
             <div className="login-container">
                 <div className="login-card">
+                    <div className="login-logo">
+                        <img src={logo} alt="IEBC Logo" className="logo-img" />
+                    </div>
                     <div className="login-header">
-                        <div className="login-icon">👑</div>
+                        <div className="login-icon"></div>
                         <h1>Super Admin Portal</h1>
                         <p>IEBC System Administration</p>
                     </div>
@@ -76,15 +76,24 @@ const SuperAdminLogin = () => {
                         
                         <div className="form-group">
                             <label>Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="Enter your password"
-                                autoComplete="current-password"
-                                required
-                            />
+                            <div className="password-input-wrapper">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="Enter your password"
+                                    autoComplete="current-password"
+                                    required
+                                />
+                                <button 
+                                    type="button"
+                                    className="toggle-password-btn"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? '🙈' : '👁️'}
+                                </button>
+                            </div>
                         </div>
                         
                         {error && (

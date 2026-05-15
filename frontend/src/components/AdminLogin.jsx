@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import logo from '../assets/logo.png';
 import '../styles/admin-login.css';
 
 const AdminLogin = () => {
     const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         nationalId: '',
         password: ''
@@ -36,7 +38,6 @@ const AdminLogin = () => {
                 localStorage.setItem('user', JSON.stringify(response.data.admin));
                 localStorage.setItem('role', response.data.admin.role);
                 
-                // Redirect based on role
                 if (response.data.admin.role === 'super_admin') {
                     navigate('/super-admin/dashboard');
                 } else {
@@ -54,8 +55,10 @@ const AdminLogin = () => {
         <div className="admin-login-page">
             <div className="login-container">
                 <div className="login-card">
+                    <div className="login-logo">
+                        <img src={logo} alt="IEBC Logo" className="logo-img" />
+                    </div>
                     <div className="login-header">
-                        <div className="login-icon">🔐</div>
                         <h1>Admin Portal</h1>
                         <p>IEBC Election Management System</p>
                         <div className="admin-badge">Authorized Personnel Only</div>
@@ -76,14 +79,23 @@ const AdminLogin = () => {
                         
                         <div className="form-group">
                             <label>Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="Enter your password"
-                                required
-                            />
+                            <div className="password-input-wrapper">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="Enter your password"
+                                    required
+                                />
+                                <button 
+                                    type="button"
+                                    className="toggle-password-btn"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? '🙈' : '👁️'}
+                                </button>
+                            </div>
                         </div>
                         
                         {error && (

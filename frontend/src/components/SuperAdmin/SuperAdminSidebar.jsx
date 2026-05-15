@@ -9,17 +9,16 @@ const SuperAdminSidebar = ({ collapsed }) => {
     const menuItems = [
         { path: '/super-admin/dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/super-admin/admins', icon: '👨‍💼', label: 'Manage Admins' },
-        { path: '/super-admin/presidential-candidates', icon: '👑', label: 'Presidential Candidates' },
-        { path: '/super-admin/counties', icon: '🗺️', label: 'Counties' },
-        { path: '/super-admin/constituencies', icon: '📍', label: 'Constituencies' },
-        { path: '/super-admin/wards', icon: '🏘️', label: 'Wards' },
-        { path: '/super-admin/polling-stations', icon: '🏢', label: 'Polling Stations' },
-        { path: '/super-admin/parties', icon: '🎭', label: 'Political Parties' },
-        { path: '/super-admin/candidates', icon: '👥', label: 'All Candidates' },
-        { path: '/super-admin/elections', icon: '📅', label: 'Elections' },
-        { path: '/super-admin/voters', icon: '👤', label: 'Voters Data' },
-        { path: '/super-admin/reports', icon: '⚠️', label: 'Reports' },
-        { path: '/super-admin/audit-logs', icon: '📋', label: 'Audit Logs' }
+        { path: '/super-admin/counties', icon: '🗺️', label: 'Counties (47)', isSuperAdminOnly: true },
+        { path: '/super-admin/constituencies', icon: '📍', label: 'Constituencies (290)', isSuperAdminOnly: true },
+        { path: '/super-admin/wards', icon: '🏘️', label: 'Wards', isSuperAdminOnly: true },
+        { path: '/super-admin/polling-stations', icon: '🏢', label: 'Polling Stations', isSuperAdminOnly: true },
+        { path: '/super-admin/parties', icon: '🎭', label: 'Political Parties', isSuperAdminOnly: true },
+        { path: '/super-admin/candidates', icon: '👥', label: 'All Candidates', isSuperAdminOnly: true },
+        { path: '/super-admin/elections', icon: '📅', label: 'Elections', isSuperAdminOnly: true },
+        { path: '/super-admin/voters', icon: '👤', label: 'Voters Data', isSuperAdminOnly: true },
+        { path: '/super-admin/reports', icon: '⚠️', label: 'Reports', isSuperAdminOnly: true },
+        { path: '/super-admin/audit-logs', icon: '📋', label: 'Audit Logs', isSuperAdminOnly: true }
     ];
 
     return (

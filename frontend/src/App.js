@@ -31,6 +31,12 @@ import PresidentialCandidates from './components/SuperAdmin/PresidentialCandidat
 import SuperAdminStatistics from './components/SuperAdmin/SuperAdminStatistics';
 import SuperAdminRegister from './components/SuperAdminRegister';
 import AdminRegister from './components/AdminRegister';
+import SuperAdminCounties from './components/SuperAdmin/pages/SuperAdminCounties';
+import SuperAdminConstituencies from './components/SuperAdmin/pages/SuperAdminConstituencies';
+import SuperAdminParties from './components/SuperAdmin/pages/SuperAdminParties';
+import SuperAdminWards from './components/SuperAdmin/pages/SuperAdminWards';
+import SuperAdminCandidates from './components/SuperAdmin/pages/SuperAdminCandidates';
+import SuperAdminVoters from './components/SuperAdmin/pages/SuperAdminVoters';
 import './styles/main.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -203,6 +209,31 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
+                <Route path="/super-admin/parties" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminParties />
+                    </ProtectedRoute>
+                } />
+                <Route path="/super-admin/candidates" element={
+    <ProtectedRoute allowedRoles={['super_admin']}>
+        <SuperAdminCandidates />
+    </ProtectedRoute>
+} />
+                <Route path="/super-admin/wards" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminWards />
+                    </ProtectedRoute>
+                } />
+                <Route path="/super-admin/constituencies" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminConstituencies />
+                    </ProtectedRoute>
+                } />
+                <Route path="/super-admin/counties" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminCounties />
+                    </ProtectedRoute>
+                } />
                 <Route 
                     path="/super-admin/admins" 
                     element={
@@ -227,6 +258,11 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
+                <Route path="/super-admin/voters" element={
+    <ProtectedRoute allowedRoles={['super_admin']}>
+        <SuperAdminVoters />
+    </ProtectedRoute>
+} />
                 <Route 
                     path="/super-admin/counties" 
                     element={
