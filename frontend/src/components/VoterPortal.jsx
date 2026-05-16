@@ -5,7 +5,7 @@ import VoterPortalHeader from './VoterPortalHeader';
 import VerticalSidebar from './VerticalSidebar';
 import CivicEducation from './CivicEducation';
 import ReportCase from './ReportCase';
-import VotingComponent from './VotingComponent';
+import VotingBooth from './Voter/VotingBooth';
 import VoterProfile from './Voter/VoterProfile';
 import VerificationPage from './Voter/VerificationPage';
 import ResultsPage from './ResultsPage';
@@ -102,7 +102,7 @@ const VoterPortal = () => {
             case 'education':
                 return <CivicEducation />;
             case 'voting':
-                return <VotingComponent voter={voter} />;
+                return <VotingBooth voter={voter} />;
             case 'report':
                 return <ReportCase />;
             case 'results':

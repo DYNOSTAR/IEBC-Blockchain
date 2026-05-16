@@ -8,20 +8,48 @@ const VotersManagement = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredVoters, setFilteredVoters] = useState([]);
+    const [selectedCounty, setSelectedCounty] = useState('');
+    const [counties, setCounties] = useState([]);
 
     useEffect(() => {
         loadVoters();
+        loadCounties();
     }, []);
 
     useEffect(() => {
-        const filtered = voters.filter(voter => 
-            voter.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            voter.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            voter.national_id?.includes(searchTerm) ||
-            voter.email?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        let filtered = [...voters];
+        
+        // Filter by search term
+        if (searchTerm) {
+            filtered = filtered.filter(voter => 
+                voter.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                voter.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                voter.national_id?.includes(searchTerm) ||
+                voter.email?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        
+        // Filter by county
+        if (selectedCounty) {
+            filtered = filtered.filter(voter => voter.county_id === parseInt(selectedCounty));
+        }
+        
         setFilteredVoters(filtered);
-    }, [searchTerm, voters]);
+    }, [searchTerm, selectedCounty, voters]);
+
+    const loadCounties = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('http://localhost:5000/api/admin/counties', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                setCounties(response.data.counties);
+            }
+        } catch (error) {
+            console.error('Error loading counties:', error);
+        }
+    };
 
     const loadVoters = async () => {
         try {
@@ -37,6 +65,16 @@ const VotersManagement = () => {
             console.error('Error loading voters:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const getVerificationBadge = (voter) => {
+        if (voter.is_verified) {
+            return <span className="status-badge verified">✓ Verified</span>;
+        } else if (voter.id_card_image || voter.face_image) {
+            return <span className="status-badge partial">⏳ Partial</span>;
+        } else {
+            return <span className="status-badge pending">⚠️ Pending</span>;
         }
     };
 
@@ -58,14 +96,28 @@ const VotersManagement = () => {
                     </div>
                 </div>
 
-                <div className="search-bar">
-                    <input
-                        type="text"
-                        placeholder="Search by name, ID, or email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
+                <div className="filters-section">
+                    <div className="search-bar">
+                        <input
+                            type="text"
+                            placeholder="Search by name, ID, or email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input"
+                        />
+                    </div>
+                    <div className="filter-select">
+                        <select
+                            value={selectedCounty}
+                            onChange={(e) => setSelectedCounty(e.target.value)}
+                            className="county-filter"
+                        >
+                            <option value="">All Counties</option>
+                            {counties.map(county => (
+                                <option key={county.id} value={county.id}>{county.name}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="data-table-container">
@@ -78,37 +130,58 @@ const VotersManagement = () => {
                                 <th>Phone</th>
                                 <th>County</th>
                                 <th>Constituency</th>
-                                <th>Polling Station</th>
+                                <th>Ward</th>
+                                <th>Verification</th>
                                 <th>Voted</th>
                                 <th>Registered</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredVoters.map((voter) => (
-                                <tr key={voter.id}>
-                                    <td>{voter.national_id}</td>
-                                    <td>{voter.first_name} {voter.last_name}</td>
-                                    <td>{voter.email || '-'}</td>
-                                    <td>{voter.phone || '-'}</td>
-                                    <td>{voter.county_name || '-'}</td>
-                                    <td>{voter.constituency_name || '-'}</td>
-                                    <td>{voter.polling_station_name || '-'}</td>
-                                    <td>
-                                        <span className={`status-badge ${voter.has_voted ? 'active' : 'inactive'}`}>
-                                            {voter.has_voted ? 'Yes' : 'No'}
-                                        </span>
-                                    </td>
-                                    <td>{new Date(voter.registered_at).toLocaleDateString()}</td>
+                            {filteredVoters.length === 0 ? (
+                                <tr>
+                                    <td colSpan="10" style={{ textAlign: 'center' }}>No voters found</td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredVoters.map((voter) => (
+                                    <tr key={voter.id}>
+                                        <td>{voter.national_id}</td>
+                                        <td><strong>{voter.first_name} {voter.last_name}</strong></td>
+                                        <td>{voter.email || '-'}</td>
+                                        <td>{voter.phone || '-'}</td>
+                                        <td>{voter.county_name || '-'}</td>
+                                        <td>{voter.constituency_name || '-'}</td>
+                                        <td>{voter.ward_name || '-'}</td>
+                                        <td>{getVerificationBadge(voter)}</td>
+                                        <td>
+                                            <span className={`status-badge ${voter.has_voted ? 'voted' : 'not-voted'}`}>
+                                                {voter.has_voted ? '✓ Voted' : 'Not Voted'}
+                                            </span>
+                                        </td>
+                                        <td>{new Date(voter.registered_at || voter.created_at).toLocaleDateString()}</td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
 
                 <div className="stats-summary">
-                    <p>Total Registered Voters: <strong>{voters.length.toLocaleString()}</strong></p>
-                    <p>Voted: <strong>{voters.filter(v => v.has_voted).length.toLocaleString()}</strong></p>
-                    <p>Pending: <strong>{voters.filter(v => !v.has_voted).length.toLocaleString()}</strong></p>
+                    <div className="stat-item">
+                        <span className="stat-label">Total Registered Voters:</span>
+                        <span className="stat-value">{voters.length.toLocaleString()}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Verified:</span>
+                        <span className="stat-value verified">{voters.filter(v => v.is_verified).length.toLocaleString()}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Voted:</span>
+                        <span className="stat-value voted">{voters.filter(v => v.has_voted).length.toLocaleString()}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Pending Verification:</span>
+                        <span className="stat-value pending">{voters.filter(v => !v.is_verified && !v.id_card_image && !v.face_image).length.toLocaleString()}</span>
+                    </div>
                 </div>
             </div>
         </AdminLayout>

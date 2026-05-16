@@ -156,3 +156,90 @@
 .submit-btn:hover {
     background: #008a3e;
 }
+/* Filters Section */
+.filters-section {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.filter-select select {
+    padding: 10px 15px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    min-width: 200px;
+    background: white;
+}
+
+.search-input {
+    width: 300px;
+    padding: 10px 15px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+
+/* Status Badges */
+.status-badge.verified {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-badge.partial {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-badge.pending {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.status-badge.voted {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-badge.not-voted {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+/* Stats Summary */
+.stats-summary {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+    padding: 15px;
+    background: #F8F9FA;
+    border-radius: 10px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stat-label {
+    font-weight: 600;
+    color: #1E3C72;
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.stat-value.verified {
+    color: #00A651;
+}
+
+.stat-value.voted {
+    color: #00A651;
+}
+
+.stat-value.pending {
+    color: #F59E0B;
+}

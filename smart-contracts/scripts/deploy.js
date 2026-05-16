@@ -11,17 +11,24 @@ async function deploy() {
         const accounts = await web3.eth.getAccounts();
         const adminAccount = accounts[0];
         
-        console.log(`Deploying from account: ${adminAccount}`);
-        console.log(`Account balance: ${await web3.eth.getBalance(adminAccount)} ETH`);
+        console.log('Deploying from account:', adminAccount);
+        const balance = await web3.eth.getBalance(adminAccount);
+        console.log('Account balance:', web3.utils.fromWei(balance, 'ether'), 'ETH');
         
-        // Read compiled contract
-        const abi = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../abi/Voting.json'), 'utf8'));
-        const bytecode = fs.readFileSync(path.resolve(__dirname, '../bytecode/Voting.bin'), 'utf8');
+        // Read contract bytecode
+        const bytecodePath = path.resolve(__dirname, '../abi/bytecode.bin');
+        const bytecode = fs.readFileSync(bytecodePath, 'utf8');
         
-        // Deploy contract
+        // Read contract ABI
+        const abiPath = path.resolve(__dirname, '../abi/Voting.json');
+        const abi = JSON.parse(fs.readFileSync(abiPath, 'utf8'));
+        
         console.log('\n📝 Deploying Voting contract...');
         
+        // Create contract instance
         const contract = new web3.eth.Contract(abi);
+        
+        // Deploy
         const deployTx = contract.deploy({
             data: '0x' + bytecode,
         });
@@ -31,68 +38,52 @@ async function deploy() {
             gas: 3000000,
         });
         
-        console.log(`✅ Contract deployed to: ${deployedContract.options.address}`);
+        console.log('✅ Contract deployed to:', deployedContract.options.address);
         
-        // Save contract address
+        // Save contract address and ABI
+        const contractInfo = {
+            address: deployedContract.options.address,
+            abi: abi,
+            network: 'ganache',
+            deployedAt: new Date().toISOString()
+        };
+        
         fs.writeFileSync(
-            path.resolve(__dirname, '../contract-address.json'),
-            JSON.stringify({ address: deployedContract.options.address, abi: abi }, null, 2)
+            path.resolve(__dirname, '../abi/contract.json'),
+            JSON.stringify(contractInfo, null, 2)
         );
         
-        console.log('\n📋 Contract Address saved to: smart-contracts/contract-address.json');
+        console.log('\n📋 Contract Address saved to: smart-contracts/abi/contract.json');
+        console.log('📍 Contract Address:', deployedContract.options.address);
         
-        // Create a test election
-        console.log('\n📝 Creating test election...');
+        // Add positions to contract
+        console.log('\n📝 Adding positions to contract...');
         
-        const startTime = Math.floor(Date.now() / 1000) - 86400; // Started yesterday
-        const endTime = Math.floor(Date.now() / 1000) + 30 * 86400; // Ends in 30 days
-        
-        const createElectionTx = await deployedContract.methods.createElection(
-            'Kenya General Election 2027',
-            startTime,
-            endTime
-        ).send({ from: adminAccount, gas: 500000 });
-        
-        console.log('✅ Election created!');
-        
-        // Add positions
         const positions = [
-            'President of Kenya',
-            'County Governor',
-            'Senator',
-            'Member of Parliament',
-            'Women Representative',
-            'Member of County Assembly'
+            { name: 'President of Kenya', level: 'national' },
+            { name: 'County Governor', level: 'county' },
+            { name: 'Senator', level: 'county' },
+            { name: 'Member of Parliament', level: 'constituency' },
+            { name: 'Women Representative', level: 'county' },
+            { name: 'Member of County Assembly', level: 'ward' }
         ];
         
-        for (const position of positions) {
-            const addPositionTx = await deployedContract.methods.addPosition(1, position)
-                .send({ from: adminAccount, gas: 500000 });
-            console.log(`✅ Position added: ${position}`);
+        for (let i = 0; i < positions.length; i++) {
+            const pos = positions[i];
+            try {
+                const tx = await deployedContract.methods
+                    .addPosition(pos.name, pos.level)
+                    .send({ from: adminAccount, gas: 200000 });
+                console.log(`✅ Position added: ${pos.name} (ID: ${i + 1})`);
+            } catch (err) {
+                console.log(`⚠️ Position ${pos.name} may already exist:`, err.message);
+            }
         }
-        
-        // Add candidates for President (position 1)
-        const presidentialCandidates = [
-            { name: 'William Ruto', party: 'UDA' },
-            { name: 'Raila Odinga', party: 'ODM' },
-            { name: 'Kalonzo Musyoka', party: 'Wiper' },
-            { name: 'George Wajackoyah', party: 'Roots' }
-        ];
-        
-        for (const candidate of presidentialCandidates) {
-            await deployedContract.methods.addCandidate(1, 1, candidate.name, candidate.party)
-                .send({ from: adminAccount, gas: 500000 });
-            console.log(`✅ Candidate added: ${candidate.name} (${candidate.party})`);
-        }
-        
-        // Activate election
-        await deployedContract.methods.activateElection(1)
-            .send({ from: adminAccount, gas: 500000 });
-        console.log('\n✅ Election activated!');
         
         console.log('\n🎉 Deployment complete!');
-        console.log(`Contract Address: ${deployedContract.options.address}`);
-        console.log(`Election ID: 1`);
+        console.log('Contract Address:', deployedContract.options.address);
+        console.log('\n📝 Copy this address for your frontend:');
+        console.log(deployedContract.options.address);
         
     } catch (error) {
         console.error('Deployment failed:', error);
