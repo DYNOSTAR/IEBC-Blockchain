@@ -7,7 +7,7 @@ const electionRoutes = require('./routes/electionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const locationRoutes = require('./routes/locationRoutes');
-const voterRoutes = require('./routes/voterRoutes');
+const voterRoutes = require('./routes/VoterRoutes');
 
 const pool = require('./config/db');
 const path = require('path');
