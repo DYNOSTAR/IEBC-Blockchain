@@ -23,6 +23,7 @@ import VotersManagement from './components/Admin/pages/VotersManagement';
 import ReportsManagement from './components/Admin/pages/ReportsManagement';
 import AuditLogs from './components/Admin/pages/AuditLogs';
 import AdminProfile from './components/Admin/pages/AdminProfile';
+import AdminResults from './components/Admin/pages/AdminResults';
 
 // Super Admin Imports
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard';
@@ -37,6 +38,7 @@ import SuperAdminParties from './components/SuperAdmin/pages/SuperAdminParties';
 import SuperAdminWards from './components/SuperAdmin/pages/SuperAdminWards';
 import SuperAdminCandidates from './components/SuperAdmin/pages/SuperAdminCandidates';
 import SuperAdminVoters from './components/SuperAdmin/pages/SuperAdminVoters';
+import SuperAdminResults from './components/SuperAdmin/pages/SuperAdminResults';
 import './styles/main.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -89,14 +91,7 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
-                <Route 
-                    path="/voter/portal/verify" 
-                    element={
-                        <ProtectedRoute allowedRoles={['voter']}>
-                            <VerificationPage />
-                        </ProtectedRoute>
-                    } 
-                />
+                <Route path="/voter/portal/verify" element={<Navigate to="/portal/verify" />} />
                 
                 {/* ============================================ */}
                 {/* ADMIN ROUTES */}
@@ -189,13 +184,21 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
-                <Route 
-                    path="/admin/audit-logs" 
+                <Route
+                    path="/admin/audit-logs"
                     element={
                         <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
                             <AuditLogs />
                         </ProtectedRoute>
-                    } 
+                    }
+                />
+                <Route
+                    path="/admin/results"
+                    element={
+                        <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                            <AdminResults />
+                        </ProtectedRoute>
+                    }
                 />
                 
                 {/* ============================================ */}
@@ -259,10 +262,15 @@ function App() {
                     } 
                 />
                 <Route path="/super-admin/voters" element={
-    <ProtectedRoute allowedRoles={['super_admin']}>
-        <SuperAdminVoters />
-    </ProtectedRoute>
-} />
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminVoters />
+                    </ProtectedRoute>
+                } />
+                <Route path="/super-admin/results" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminResults />
+                    </ProtectedRoute>
+                } />
                 <Route 
                     path="/super-admin/counties" 
                     element={

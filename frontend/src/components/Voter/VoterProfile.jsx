@@ -4,31 +4,26 @@ import axios from 'axios';
 import '../../styles/voter-profile.css';
 
 const VoterProfile = ({ voter, onUpdate }) => {
-     const navigate = useNavigate();
+    const navigate = useNavigate();
     const [editMode, setEditMode] = useState(false);
-    const [showVerification, setShowVerification] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
-    
+
     const [formData, setFormData] = useState({
         email: '',
         phone: '',
         password: '',
         confirmPassword: ''
     });
-    
+
     const [verificationStatus, setVerificationStatus] = useState({
         hasIdCard: false,
         hasFaceImage: false,
         hasBiometric: false,
-        isVerified: false
+        isVerified: false,
+        level: 0
     });
-
-    // Log the voter data to debug
-    useEffect(() => {
-        console.log('Voter data in profile component:', voter);
-    }, [voter]);
 
     useEffect(() => {
         if (voter) {
@@ -38,266 +33,93 @@ const VoterProfile = ({ voter, onUpdate }) => {
                 password: '',
                 confirmPassword: ''
             });
-            
             setVerificationStatus({
-                hasIdCard: !!voter.idCardImage,
-                hasFaceImage: !!voter.faceImage,
-                hasBiometric: !!voter.biometricData,
-                isVerified: voter.isVerified || false
+                hasIdCard:   !!voter.idCardPath,
+                hasFaceImage: !!voter.faceImagePath,
+                hasBiometric: voter.biometricVerified || false,
+                isVerified:   voter.isVerified || false,
+                level:        voter.verificationLevel || 0
             });
         }
     }, [voter]);
 
-    const isVerificationComplete = () => {
-        return verificationStatus.hasIdCard && verificationStatus.hasFaceImage && verificationStatus.hasBiometric;
-    };
-
     const completedSteps = () => {
-        let count = 0;
-        if (verificationStatus.hasIdCard) count++;
-        if (verificationStatus.hasFaceImage) count++;
-        if (verificationStatus.hasBiometric) count++;
-        return count;
+        let n = 0;
+        if (verificationStatus.hasIdCard)    n++;
+        if (verificationStatus.hasFaceImage) n++;
+        if (verificationStatus.hasBiometric) n++;
+        return n;
     };
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-        setMessage('');
-    };
+    const isFullyVerified = () => verificationStatus.isVerified || verificationStatus.level >= 4;
 
     const showMessage = (msg, type = 'success') => {
         setMessage(msg);
         setMessageType(type);
-        setTimeout(() => {
-            setMessage('');
-            setMessageType('');
-        }, 3000);
+        setTimeout(() => { setMessage(''); setMessageType(''); }, 3500);
+    };
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setMessage('');
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         if (formData.password && formData.password !== formData.confirmPassword) {
-            showMessage('Passwords do not match', 'error');
-            return;
+            showMessage('Passwords do not match', 'error'); return;
         }
-        
         if (formData.password && formData.password.length < 6) {
-            showMessage('Password must be at least 6 characters', 'error');
-            return;
+            showMessage('Password must be at least 6 characters', 'error'); return;
         }
-        
         setLoading(true);
-        
         try {
             const token = localStorage.getItem('token');
             const response = await axios.put('http://localhost:5000/api/voter/update-profile', {
                 email: formData.email,
                 phone: formData.phone,
                 password: formData.password || undefined
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
+            }, { headers: { Authorization: `Bearer ${token}` } });
+
             if (response.data.success) {
                 showMessage('Profile updated successfully!', 'success');
                 setEditMode(false);
                 if (onUpdate) onUpdate();
-                setFormData(prev => ({
-                    ...prev,
-                    password: '',
-                    confirmPassword: ''
-                }));
+                setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
             } else {
                 showMessage(response.data.error || 'Failed to update profile', 'error');
             }
         } catch (error) {
-            console.error('Update error:', error);
             showMessage('Failed to update profile. Please try again.', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleIdCardUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        if (!file.type.startsWith('image/')) {
-            showMessage('Please upload an image file', 'error');
-            return;
-        }
-        
-        const uploadData = new FormData();
-        uploadData.append('idCardImage', file);
-        
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.post('http://localhost:5000/api/voter/verify-id-card', uploadData, {
-                headers: { 
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-            
-            if (response.data.success) {
-                showMessage('ID Card uploaded successfully!', 'success');
-                setVerificationStatus(prev => ({ ...prev, hasIdCard: true }));
-                if (onUpdate) onUpdate();
-            } else {
-                showMessage(response.data.error || 'ID Card upload failed', 'error');
-            }
-        } catch (error) {
-            console.error('ID Card upload error:', error);
-            showMessage('ID Card upload failed', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleFaceUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        if (!file.type.startsWith('image/')) {
-            showMessage('Please upload an image file', 'error');
-            return;
-        }
-        
-        const uploadData = new FormData();
-        uploadData.append('faceImage', file);
-        
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.post('http://localhost:5000/api/voter/verify-face', uploadData, {
-                headers: { 
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-            
-            if (response.data.success) {
-                showMessage('Face image uploaded successfully!', 'success');
-                setVerificationStatus(prev => ({ ...prev, hasFaceImage: true }));
-                if (onUpdate) onUpdate();
-            } else {
-                showMessage(response.data.error || 'Face upload failed', 'error');
-            }
-        } catch (error) {
-            console.error('Face upload error:', error);
-            showMessage('Face upload failed', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const startBiometric = async () => {
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.post('http://localhost:5000/api/voter/verify-biometric', {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            if (response.data.success) {
-                showMessage('Biometric verification successful!', 'success');
-                setVerificationStatus(prev => ({ ...prev, hasBiometric: true }));
-                if (onUpdate) onUpdate();
-            } else {
-                showMessage(response.data.error || 'Biometric verification failed', 'error');
-            }
-        } catch (error) {
-            console.error('Biometric error:', error);
-            showMessage('Biometric verification failed', 'error');
-        } finally {
-            setLoading(false);
-        }
+    const verificationLevelLabel = () => {
+        if (verificationStatus.level >= 4) return '✓ Fully Verified';
+        if (verificationStatus.level === 3) return `${completedSteps()}/3 steps (biometric pending)`;
+        if (verificationStatus.level === 2) return `${completedSteps()}/3 steps (face + biometric pending)`;
+        if (verificationStatus.level === 1) return 'OTP done — ID card pending';
+        return 'Not started';
     };
 
     return (
         <div className="voter-profile-page">
             {/* Verification Required Banner */}
-            {!isVerificationComplete() && (
+            {!isFullyVerified() && (
                 <div className="verification-required-card">
                     <div className="verification-icon">🔐</div>
                     <div className="verification-content">
                         <h3>Complete Verification to Vote</h3>
                         <p>You have completed {completedSteps()} of 3 verification steps.</p>
-                        <button className="verify-now-btn" onClick={() => navigate('/voter/portal/verify')}>
-    Start Verification
-</button>
+                        <button className="verify-now-btn" onClick={() => navigate('/portal/verify')}>
+                            {verificationStatus.level === 0 ? 'Start Verification' : 'Continue Verification'}
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Verification Modal */}
-            {showVerification && (
-                <div className="verification-modal-overlay">
-                    <div className="verification-modal">
-                        <div className="modal-header">
-                            <div className="modal-icon">🔐</div>
-                            <h3>Identity Verification</h3>
-                            <button className="close-modal" onClick={() => setShowVerification(false)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <p>Complete all steps to verify your identity</p>
-                            
-                            <div className="verification-steps">
-                                <div className={`step ${verificationStatus.hasIdCard ? 'completed' : ''}`}>
-                                    <div className="step-number">1</div>
-                                    <div className="step-content">
-                                        <h4>National ID Card</h4>
-                                        <p>Upload a clear photo of your National ID card</p>
-                                        {!verificationStatus.hasIdCard ? (
-                                            <input type="file" accept="image/*" onChange={handleIdCardUpload} disabled={loading} />
-                                        ) : (
-                                            <span className="step-verified">✓ Verified</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className={`step ${verificationStatus.hasFaceImage ? 'completed' : ''}`}>
-                                    <div className="step-number">2</div>
-                                    <div className="step-content">
-                                        <h4>Face Recognition</h4>
-                                        <p>Upload a clear photo of your face</p>
-                                        {!verificationStatus.hasFaceImage ? (
-                                            <input type="file" accept="image/*" onChange={handleFaceUpload} disabled={loading} />
-                                        ) : (
-                                            <span className="step-verified">✓ Verified</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className={`step ${verificationStatus.hasBiometric ? 'completed' : ''}`}>
-                                    <div className="step-number">3</div>
-                                    <div className="step-content">
-                                        <h4>Biometric Verification</h4>
-                                        <p>Use your fingerprint to verify</p>
-                                        {!verificationStatus.hasBiometric ? (
-                                            <button onClick={startBiometric} disabled={loading} className="biometric-btn">
-                                                {loading ? 'Processing...' : 'Start Biometric Scan'}
-                                            </button>
-                                        ) : (
-                                            <span className="step-verified">✓ Verified</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="later-btn" onClick={() => setShowVerification(false)}>Close</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Profile Container */}
             <div className="profile-container">
                 <div className="profile-header">
                     <h2>My Profile</h2>
@@ -348,8 +170,8 @@ const VoterProfile = ({ voter, onUpdate }) => {
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Verification:</span>
-                                <span className={`detail-value ${isVerificationComplete() ? 'status-verified' : 'status-pending'}`}>
-                                    {isVerificationComplete() ? '✓ Fully Verified' : `${completedSteps()}/3 Verified`}
+                                <span className={`detail-value ${isFullyVerified() ? 'status-verified' : 'status-pending'}`}>
+                                    {verificationLevelLabel()}
                                 </span>
                             </div>
                             <div className="detail-row">
@@ -358,47 +180,76 @@ const VoterProfile = ({ voter, onUpdate }) => {
                                     {voter?.hasVoted ? '✓ Voted' : 'Not Voted Yet'}
                                 </span>
                             </div>
+
+                            {/* Uploaded document thumbnails */}
+                            {(verificationStatus.hasIdCard || verificationStatus.hasFaceImage) && (
+                                <div className="detail-row verification-images">
+                                    <span className="detail-label">Documents:</span>
+                                    <div className="doc-thumbnails">
+                                        {verificationStatus.hasIdCard && (
+                                            <div className="doc-thumb">
+                                                <img
+                                                    src={`http://localhost:5000${voter.idCardPath}`}
+                                                    alt="ID Card"
+                                                    title="National ID Card"
+                                                />
+                                                <small>ID Card ✓</small>
+                                            </div>
+                                        )}
+                                        {verificationStatus.hasFaceImage && (
+                                            <div className="doc-thumb">
+                                                <img
+                                                    src={`http://localhost:5000${voter.faceImagePath}`}
+                                                    alt="Face Photo"
+                                                    title="Face Photo"
+                                                />
+                                                <small>Face ✓</small>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="profile-edit-form">
                         <div className="form-group">
                             <label>Email Address</label>
-                            <input 
-                                type="email" 
+                            <input
+                                type="email"
                                 name="email"
-                                value={formData.email} 
+                                value={formData.email}
                                 onChange={handleChange}
                                 placeholder="your@email.com"
                             />
                         </div>
                         <div className="form-group">
                             <label>Phone Number</label>
-                            <input 
-                                type="tel" 
+                            <input
+                                type="tel"
                                 name="phone"
-                                value={formData.phone} 
+                                value={formData.phone}
                                 onChange={handleChange}
                                 placeholder="0712345678"
                             />
                         </div>
                         <div className="form-divider"></div>
                         <div className="form-group">
-                            <label>New Password (leave blank to keep current)</label>
-                            <input 
-                                type="password" 
+                            <label>New Password <small>(leave blank to keep current)</small></label>
+                            <input
+                                type="password"
                                 name="password"
-                                value={formData.password} 
+                                value={formData.password}
                                 onChange={handleChange}
                                 placeholder="Enter new password"
                             />
                         </div>
                         <div className="form-group">
                             <label>Confirm New Password</label>
-                            <input 
-                                type="password" 
+                            <input
+                                type="password"
                                 name="confirmPassword"
-                                value={formData.confirmPassword} 
+                                value={formData.confirmPassword}
                                 onChange={handleChange}
                                 placeholder="Confirm new password"
                             />
@@ -414,7 +265,7 @@ const VoterProfile = ({ voter, onUpdate }) => {
                                 });
                             }}>Cancel</button>
                             <button type="submit" className="save-btn" disabled={loading}>
-                                {loading ? 'Saving...' : 'Save Changes'}
+                                {loading ? 'Saving…' : 'Save Changes'}
                             </button>
                         </div>
                     </form>

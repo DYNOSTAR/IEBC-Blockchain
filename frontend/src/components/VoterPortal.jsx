@@ -8,7 +8,7 @@ import ReportCase from './ReportCase';
 import VotingBooth from './Voter/VotingBooth';
 import VoterProfile from './Voter/VoterProfile';
 import VerificationPage from './Voter/VerificationPage';
-import ResultsPage from './ResultsPage';
+import VoterResults from './Voter/VoterResults';
 import '../styles/voter-portal.css';
 
 const VoterPortal = () => {
@@ -106,7 +106,7 @@ const VoterPortal = () => {
             case 'report':
                 return <ReportCase />;
             case 'results':
-                return <ResultsPage />;
+                return <VoterResults voter={voter} />;
             case 'verify':
                 return <VerificationPage voter={voter} onComplete={handleProfileUpdate} />;
             default:

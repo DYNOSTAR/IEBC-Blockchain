@@ -121,51 +121,48 @@ const VotingBooth = ({ voter }) => {
     };
 
     const submitVote = async () => {
-        const currentPosition = positions[currentStep];
-        const selectedCandidateId = selectedVotes[currentPosition.id];
-
-        if (!selectedCandidateId) {
-            setError(`Please select a candidate for ${currentPosition.name}`);
-            return;
+        // Validate all positions have a selection before submitting any
+        for (const pos of positions) {
+            if (!selectedVotes[pos.id]) {
+                setError(`Please select a candidate for ${pos.name}`);
+                setCurrentStep(positions.indexOf(pos));
+                return;
+            }
         }
 
         setSubmitting(true);
         setError('');
+        const codes = [];
 
         try {
-            // Backend handles blockchain signing — no MetaMask needed
-            const response = await voteAPI.cast(
-                electionId,
-                currentPosition.dbId,
-                selectedCandidateId
-            );
+            for (const pos of positions) {
+                const candidateId = selectedVotes[pos.id];
+                const response = await voteAPI.cast(electionId, pos.dbId, candidateId);
 
-            if (response.data.success) {
-                const selectedCandidate = candidatesByPosition[currentPosition.id]?.find(
-                    c => c.id === selectedCandidateId
-                );
+                if (!response.data.success) {
+                    // Skip positions already voted (double-vote protection)
+                    if (response.data.error?.includes('already voted')) continue;
+                    setError(`${pos.name}: ${response.data.error || 'Vote failed'}`);
+                    setSubmitting(false);
+                    return;
+                }
 
-                setVerificationCodes(prev => [...prev, {
-                    position: currentPosition.name,
+                const candidate = candidatesByPosition[pos.id]?.find(c => c.id === candidateId);
+                codes.push({
+                    position: pos.name,
                     code: response.data.verificationCode,
-                    candidate: selectedCandidate?.name,
-                    party: selectedCandidate?.party,
+                    candidate: candidate?.name,
+                    party: candidate?.party,
                     transactionHash: response.data.transactionHash,
                     blockNumber: response.data.blockNumber,
                     simulated: response.data.simulated || false
-                }]);
-
-                if (currentStep + 1 < positions.length) {
-                    setCurrentStep(currentStep + 1);
-                } else {
-                    setSubmitted(true);
-                }
-            } else {
-                setError(response.data.error || 'Failed to cast vote.');
+                });
             }
+            setVerificationCodes(codes);
+            setSubmitted(true);
         } catch (err) {
             console.error('Vote submission error:', err);
-            setError(err.response?.data?.error || 'Failed to submit vote. Please try again.');
+            setError(err.response?.data?.error || 'Failed to submit votes. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -212,7 +209,7 @@ const VotingBooth = ({ voter }) => {
                     Refresh
                 </button>
                 <button
-                    onClick={() => navigate('/voter/portal/profile')}
+                    onClick={() => navigate('/portal/profile')}
                     className="back-btn"
                     style={{ marginLeft: 12 }}
                 >
@@ -265,13 +262,13 @@ const VotingBooth = ({ voter }) => {
 
                 <div className="success-buttons">
                     <button
-                        onClick={() => navigate('/voter/portal/results')}
+                        onClick={() => navigate('/portal/results')}
                         className="view-results-btn"
                     >
                         View Live Results
                     </button>
                     <button
-                        onClick={() => navigate('/voter/portal/profile')}
+                        onClick={() => navigate('/portal/profile')}
                         className="home-btn"
                     >
                         Return to Profile
@@ -324,6 +321,18 @@ const VotingBooth = ({ voter }) => {
                         Position {currentStep + 1} of {positions.length}
                     </span>
                     <h2>{currentPosition?.name}</h2>
+                    {currentPosition?.level === 'national' && (
+                        <p className="position-locality">🇰🇪 National Race — All Kenya</p>
+                    )}
+                    {currentPosition?.level === 'county' && voter?.countyName && (
+                        <p className="position-locality">📍 County Race — {voter.countyName} County</p>
+                    )}
+                    {currentPosition?.level === 'constituency' && voter?.constituencyName && (
+                        <p className="position-locality">📍 Constituency Race — {voter.constituencyName}</p>
+                    )}
+                    {currentPosition?.level === 'ward' && voter?.wardName && (
+                        <p className="position-locality">📍 Ward Race — {voter.wardName} Ward</p>
+                    )}
                     {currentPosition?.description && (
                         <p>{currentPosition.description}</p>
                     )}

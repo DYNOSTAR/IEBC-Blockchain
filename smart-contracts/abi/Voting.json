@@ -28,9 +28,9 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "voter",
-        "type": "address"
+        "internalType": "bytes32",
+        "name": "voterIdHash",
+        "type": "bytes32"
       },
       {
         "indexed": true,
@@ -266,9 +266,9 @@
   {
     "inputs": [
       {
-        "internalType": "address",
+        "internalType": "bytes32",
         "name": "",
-        "type": "address"
+        "type": "bytes32"
       },
       {
         "internalType": "uint256",
@@ -277,6 +277,30 @@
       }
     ],
     "name": "hasVotedForPosition",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "_voterIdHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_positionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "hasVoterVotedForPosition",
     "outputs": [
       {
         "internalType": "bool",
@@ -360,9 +384,9 @@
         "type": "uint256"
       },
       {
-        "internalType": "string",
-        "name": "_verificationCode",
-        "type": "string"
+        "internalType": "bytes32",
+        "name": "_voterIdHash",
+        "type": "bytes32"
       }
     ],
     "name": "vote",

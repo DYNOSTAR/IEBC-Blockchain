@@ -1,13 +1,13 @@
 const { Web3 } = require('web3');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 let contractAddress = null;
 let contractABI = null;
 
 const possiblePaths = [
     path.resolve(__dirname, '../../smart-contracts/abi/contract.json'),
-    path.resolve(__dirname, '../../smart-contracts/contract-address.json'),
     path.resolve(__dirname, '../blockchain/contract.json'),
 ];
 
@@ -23,7 +23,7 @@ for (const p of possiblePaths) {
 }
 
 if (!contractAddress) {
-    console.warn('⚠️  Contract not found. Run: cd smart-contracts && node scripts/deploy.js');
+    console.warn('⚠️  Contract not found. Run: cd smart-contracts && node scripts/compile.js && node scripts/deploy.js');
 }
 
 const GANACHE_URL = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:7545';
@@ -43,14 +43,25 @@ function generateVerificationCode() {
     return code;
 }
 
-async function castVoteOnBlockchain(electionId, positionId, candidateId) {
+// sha256(nationalId) → 32-byte Buffer → Solidity bytes32
+// Web3 v4.x requires Uint8Array (Buffer) for bytes32, not a hex string.
+// PII never touches the chain — only the hash.
+function hashVoterId(nationalId) {
+    return crypto.createHash('sha256').update(String(nationalId)).digest();
+}
+
+// positionId   = blockchain position ID (display_order, 1–6)
+// candidateId  = DB candidate ID (matches blockchain candidate ID after setupElection)
+// nationalId   = voter's national ID — hashed before sending to chain
+async function castVoteOnBlockchain(positionId, candidateId, nationalId) {
     const verificationCode = generateVerificationCode();
+    const voterIdHash = hashVoterId(nationalId);
 
     if (!votingContract || !SERVER_ADDRESS || !SERVER_PRIVATE_KEY) {
         console.warn('⚠️  Blockchain not fully configured — simulating transaction');
         return {
             success: true, simulated: true,
-            transactionHash: '0x' + require('crypto').randomBytes(32).toString('hex'),
+            transactionHash: '0x' + crypto.randomBytes(32).toString('hex'),
             verificationCode,
             blockNumber: Math.floor(Math.random() * 1000000) + 18000000
         };
@@ -58,7 +69,7 @@ async function castVoteOnBlockchain(electionId, positionId, candidateId) {
 
     try {
         const txData = votingContract.methods
-            .vote(parseInt(positionId), parseInt(candidateId), verificationCode)
+            .vote(parseInt(positionId), parseInt(candidateId), voterIdHash)
             .encodeABI();
 
         const gasEstimate = await web3.eth.estimateGas({
@@ -67,8 +78,11 @@ async function castVoteOnBlockchain(electionId, positionId, candidateId) {
         const gasPrice = await web3.eth.getGasPrice();
 
         const signedTx = await web3.eth.accounts.signTransaction({
-            from: SERVER_ADDRESS, to: contractAddress, data: txData,
-            gas: Math.ceil(Number(gasEstimate) * 1.3), gasPrice
+            from: SERVER_ADDRESS,
+            to: contractAddress,
+            data: txData,
+            gas: Math.ceil(Number(gasEstimate) * 1.3),
+            gasPrice
         }, SERVER_PRIVATE_KEY);
 
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
@@ -86,12 +100,12 @@ async function castVoteOnBlockchain(electionId, positionId, candidateId) {
     }
 }
 
-async function getBlockchainVoteCount(positionId, candidateId) {
-    if (!votingContract) return 0;
+async function getBlockchainVoteCount(candidateId) {
+    if (!votingContract) return null;
     try {
         const c = await votingContract.methods.getCandidate(parseInt(candidateId)).call();
         return parseInt(c.voteCount || 0);
-    } catch { return 0; }
+    } catch { return null; }
 }
 
 async function getElectionDetails() {
@@ -100,7 +114,12 @@ async function getElectionDetails() {
         const active = await votingContract.methods.electionActive().call();
         const nextPos = await votingContract.methods.nextPositionId().call();
         const nextCand = await votingContract.methods.nextCandidateId().call();
-        return { isActive: active, positions: parseInt(nextPos)-1, candidates: parseInt(nextCand)-1, address: contractAddress };
+        return {
+            isActive: active,
+            positions: parseInt(nextPos) - 1,
+            candidates: parseInt(nextCand) - 1,
+            address: contractAddress
+        };
     } catch (error) {
         console.error('getElectionDetails error:', error.message);
         return null;
@@ -119,8 +138,15 @@ async function checkBlockchainConnection() {
                 candidateCount = parseInt(nextCand) - 1;
             } catch { }
         }
-        return { connected: true, blockNumber: Number(blockNumber), networkId: Number(networkId),
-                 contractLoaded: !!votingContract, contractAddress, electionActive, candidateCount };
+        return {
+            connected: true,
+            blockNumber: Number(blockNumber),
+            networkId: Number(networkId),
+            contractLoaded: !!votingContract,
+            contractAddress,
+            electionActive,
+            candidateCount
+        };
     } catch (error) {
         return { connected: false, error: error.message, contractLoaded: false };
     }
@@ -128,6 +154,6 @@ async function checkBlockchainConnection() {
 
 module.exports = {
     web3, votingContract, contractAddress,
-    castVoteOnBlockchain, getBlockchainVoteCount,
+    castVoteOnBlockchain, getBlockchainVoteCount, hashVoterId,
     getElectionDetails, generateVerificationCode, checkBlockchainConnection
 };

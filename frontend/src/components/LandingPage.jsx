@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from './Layout/Header';
 import Footer from './Layout/Footer';
 import '../styles/landing.css';
+import '../styles/results.css';
+
+const PARTY_COLORS = {
+    UDA: '#16a34a', ODM: '#dc2626', Wiper: '#ca8a04',
+    Roots: '#854d0e', ANC: '#2563eb', Ford: '#7c3aed',
+};
+const partyColor = (p) => PARTY_COLORS[p] || '#6b7280';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+    const [liveResults, setLiveResults] = useState(null);
+
+    useEffect(() => {
+        fetch('http://localhost:5000/api/live-results')
+            .then(r => r.json())
+            .then(d => { if (d.success) setLiveResults(d); })
+            .catch(() => {});
+    }, []);
+
     const [announcements] = useState([
         {
             id: 1,
@@ -105,6 +121,87 @@ const LandingPage = () => {
                             </div>
                         ))}
                     </div>
+                </div>
+            </section>
+
+            {/* Live Results Section */}
+            <section className="landing-results-section">
+                <div className="container">
+                    <div className="section-header">
+                        <h2>🗳️ Live Election Results</h2>
+                        <p>Kenya General Election 2027 — Real-time blockchain-verified counts</p>
+                        <div className="ke-line" />
+                    </div>
+
+                    {liveResults ? (
+                        <>
+                            <div className="stats-row" style={{ maxWidth: 600, margin: '0 auto 28px' }}>
+                                <div className="stat-card">
+                                    <div className="stat-icon-r">🗳️</div>
+                                    <div className="stat-num">{liveResults.totalVotes.toLocaleString()}</div>
+                                    <div className="stat-label-r">Votes Cast</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-icon-r">🏛️</div>
+                                    <div className="stat-num">{liveResults.positions.length}</div>
+                                    <div className="stat-label-r">Positions</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-icon-r">⛓️</div>
+                                    <div className="stat-num" style={{ fontSize: '1rem' }}>Live</div>
+                                    <div className="stat-label-r">Blockchain Verified</div>
+                                </div>
+                            </div>
+
+                            <div className="landing-pos-grid">
+                                {liveResults.positions.map((pos, i) => {
+                                    const total = pos.candidates.reduce((s, c) => s + c.votes, 0);
+                                    return (
+                                        <div key={i} className="landing-pos-card">
+                                            <div className="landing-pos-card-head">
+                                                <div className="landing-pos-name">{pos.name}</div>
+                                                <div className="landing-pos-level">{pos.level}</div>
+                                            </div>
+                                            <div className="landing-pos-body">
+                                                {pos.candidates.map((c, j) => {
+                                                    const pct = total > 0 ? Math.round((c.votes / total) * 1000) / 10 : 0;
+                                                    return (
+                                                        <div key={j} className="landing-cand-row">
+                                                            {j === 0 && c.votes > 0 && <span style={{ fontSize: '0.85rem' }}>🏆</span>}
+                                                            <span className="landing-cand-name">{c.name}</span>
+                                                            <span className="party-chip" style={{ background: partyColor(c.party), fontSize: '0.65rem', padding: '1px 6px' }}>
+                                                                {c.party}
+                                                            </span>
+                                                            <span className="landing-cand-votes">{c.votes.toLocaleString()}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {pos.candidates.every(c => c.votes === 0) && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#bbb', textAlign: 'center', padding: '8px 0' }}>
+                                                        Voting not yet started
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="landing-results-footer">
+                                <button onClick={() => navigate('/results')} className="btn-primary-large" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                                    📊 View Full Results →
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: 12 }}>⛓️</div>
+                            <p>Election results will appear here once voting begins.</p>
+                            <button onClick={() => navigate('/results')} className="btn-register-large" style={{ marginTop: 16 }}>
+                                Check Results Page
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 

@@ -2,13 +2,40 @@ const Web3 = require('web3');
 const fs = require('fs');
 const path = require('path');
 
+// Load backend .env
+try {
+    const envFile = fs.readFileSync(path.resolve(__dirname, '../../backend/.env'), 'utf8');
+    envFile.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx < 1) return;
+        const key = trimmed.slice(0, eqIdx).trim();
+        const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+        if (key && !(key in process.env)) process.env[key] = val;
+    });
+} catch { }
+
 const contractInfo = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../abi/contract.json'), 'utf8'));
-const web3 = new Web3('http://127.0.0.1:7545');
+const RPC_URL = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:7545';
+const web3 = new Web3(RPC_URL);
 
 async function setupElection() {
     try {
         const accounts = await web3.eth.getAccounts();
-        const admin = accounts[0];
+
+        // Use server address if configured, otherwise fall back to Ganache accounts[0]
+        let admin;
+        const pk = (process.env.SERVER_ETH_PRIVATE_KEY || '').replace('0x', '');
+        if (process.env.SERVER_ETH_ADDRESS && pk.length === 64) {
+            admin = process.env.SERVER_ETH_ADDRESS;
+            web3.eth.accounts.wallet.add(process.env.SERVER_ETH_PRIVATE_KEY);
+            console.log('Using SERVER_ETH_ADDRESS as admin:', admin);
+        } else {
+            admin = accounts[0];
+            console.log('Using Ganache accounts[0] as admin:', admin);
+        }
+
         const contract = new web3.eth.Contract(contractInfo.abi, contractInfo.address);
         
         console.log('Setting up election...');

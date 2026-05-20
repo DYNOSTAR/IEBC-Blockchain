@@ -16,6 +16,7 @@ const AdminSidebar = ({ collapsed }) => {
         { path: '/admin/parties', icon: '🎭', label: 'Political Parties' },
         { path: '/admin/candidates', icon: '👥', label: 'Candidates' },
         { path: '/admin/elections', icon: '📅', label: 'Elections' },
+        { path: '/admin/results',   icon: '📊', label: 'Results' },
         { path: '/admin/voters', icon: '👤', label: 'Voters Data' },
         { path: '/admin/reports', icon: '⚠️', label: 'Reports' },
         { path: '/admin/audit-logs', icon: '📋', label: 'Audit Logs' }

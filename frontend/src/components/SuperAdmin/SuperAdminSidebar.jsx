@@ -8,7 +8,8 @@ const SuperAdminSidebar = ({ collapsed }) => {
 
     const menuItems = [
         { path: '/super-admin/dashboard', icon: '📊', label: 'Dashboard' },
-        { path: '/super-admin/admins', icon: '👨‍💼', label: 'Manage Admins' },
+        { path: '/super-admin/admins',   icon: '👨‍💼', label: 'Manage Admins' },
+        { path: '/super-admin/results',  icon: '📊',  label: 'Election Results', isSuperAdminOnly: true },
         { path: '/super-admin/counties', icon: '🗺️', label: 'Counties (47)', isSuperAdminOnly: true },
         { path: '/super-admin/constituencies', icon: '📍', label: 'Constituencies (290)', isSuperAdminOnly: true },
         { path: '/super-admin/wards', icon: '🏘️', label: 'Wards', isSuperAdminOnly: true },

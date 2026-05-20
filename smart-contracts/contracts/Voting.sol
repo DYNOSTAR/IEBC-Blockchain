@@ -22,14 +22,15 @@ contract Voting {
     
     mapping(uint256 => Candidate) public candidates;
     mapping(uint256 => Position) public positions;
-    mapping(address => mapping(uint256 => bool)) public hasVotedForPosition;
-    
+    // Keyed by sha256(nationalId) — allows server-signed txns for multiple voters
+    mapping(bytes32 => mapping(uint256 => bool)) public hasVotedForPosition;
+
     uint256 public nextCandidateId;
     uint256 public nextPositionId;
     address public admin;
-    bool public electionActive;  // Changed from isElectionActive to electionActive
-    
-    event VoteCast(address indexed voter, uint256 indexed positionId, uint256 indexed candidateId);
+    bool public electionActive;
+
+    event VoteCast(bytes32 indexed voterIdHash, uint256 indexed positionId, uint256 indexed candidateId);
     event CandidateAdded(uint256 candidateId, string name);
     
     modifier onlyAdmin() {
@@ -79,17 +80,23 @@ contract Voting {
         return candidateId;
     }
     
+    // Server calls this once per voter per position, signed with server's ETH private key.
+    // _voterIdHash = sha256(nationalId) computed off-chain so no PII touches the chain.
     function vote(
         uint256 _positionId,
         uint256 _candidateId,
-        string memory _verificationCode
-    ) public electionIsActive {
-        require(!hasVotedForPosition[msg.sender][_positionId], "Already voted");
+        bytes32 _voterIdHash
+    ) public onlyAdmin electionIsActive {
+        require(!hasVotedForPosition[_voterIdHash][_positionId], "Already voted for this position");
         require(candidates[_candidateId].exists, "Invalid candidate");
-        
+
         candidates[_candidateId].voteCount++;
-        hasVotedForPosition[msg.sender][_positionId] = true;
-        emit VoteCast(msg.sender, _positionId, _candidateId);
+        hasVotedForPosition[_voterIdHash][_positionId] = true;
+        emit VoteCast(_voterIdHash, _positionId, _candidateId);
+    }
+
+    function hasVoterVotedForPosition(bytes32 _voterIdHash, uint256 _positionId) public view returns (bool) {
+        return hasVotedForPosition[_voterIdHash][_positionId];
     }
     
     function getCandidatesByPosition(uint256 _positionId) public view returns (uint256[] memory) {

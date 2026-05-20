@@ -1,178 +1,277 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/main.css';
+import api from '../services/api';
 import '../styles/results.css';
+
+const PARTY_COLORS = {
+    UDA: '#16a34a', ODM: '#dc2626', Wiper: '#ca8a04',
+    Roots: '#854d0e', ANC: '#2563eb', Ford: '#7c3aed',
+};
+const partyColor = (p) => PARTY_COLORS[p] || '#6b7280';
+const fillClass  = (p) => ({ UDA:'fill-green', ODM:'fill-red', Wiper:'fill-gold', ANC:'fill-blue' }[p] || 'fill-gray');
 
 const ResultsPage = () => {
     const navigate = useNavigate();
-    const [results, setResults] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedCounty, setSelectedCounty] = useState('all');
+    const [data, setData]             = useState(null);
+    const [loading, setLoading]       = useState(true);
+    const [error, setError]           = useState('');
     const [lastUpdated, setLastUpdated] = useState(null);
+    const [verifyCode, setVerifyCode]   = useState('');
+    const [verifyResult, setVerifyResult] = useState(null);
+    const [verifying, setVerifying]   = useState(false);
+    const [activeTab, setActiveTab]   = useState(0);
+
+    const loadResults = useCallback(async () => {
+        setLoading(true); setError('');
+        try {
+            const electionRes = await api.get('/elections/active');
+            if (!electionRes.data.success) { setError('No active election found.'); setLoading(false); return; }
+            const electionId = electionRes.data.election.id;
+            const resultsRes = await api.get(`/elections/results/${electionId}`);
+            if (!resultsRes.data.success) { setError('Failed to load results.'); setLoading(false); return; }
+            setData(resultsRes.data);
+            setLastUpdated(new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' }));
+        } catch (err) {
+            setError('Failed to load results. Please try again.');
+            console.error('Results error:', err);
+        } finally { setLoading(false); }
+    }, []);
 
     useEffect(() => {
         loadResults();
-    }, []);
+        const t = setInterval(loadResults, 30000);
+        return () => clearInterval(t);
+    }, [loadResults, ]);
 
-    const loadResults = () => {
-        // Mock results data
-        setTimeout(() => {
-            const mockResults = {
-                president: [
-                    { candidate: "William Ruto", party: "UDA", votes: 4523456, percentage: 48.5, color: "green" },
-                    { candidate: "Raila Odinga", party: "ODM", votes: 4432123, percentage: 47.2, color: "red" },
-                    { candidate: "Kalonzo Musyoka", party: "Wiper", votes: 234567, percentage: 2.5, color: "yellow" },
-                    { candidate: "George Wajackoyah", party: "Roots", votes: 123456, percentage: 1.8, color: "brown" }
-                ],
-                totalVotes: 9313602,
-                turnout: 68.5,
-                pollingStationsReported: 43289,
-                totalPollingStations: 46229,
-                lastBlockHash: "0x7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
-            };
-            setResults(mockResults);
-            setLastUpdated(new Date().toLocaleString());
-            setLoading(false);
-        }, 1000);
+    const handleVerify = async () => {
+        if (!verifyCode.trim()) return;
+        setVerifying(true); setVerifyResult(null);
+        try {
+            const res = await api.post('/votes/verify', { verificationCode: verifyCode.trim() });
+            setVerifyResult(res.data);
+        } catch (err) {
+            setVerifyResult({ success: false, error: err.response?.data?.error || 'Code not found.' });
+        } finally { setVerifying(false); }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-4xl mb-4">⛓️</div>
-                    <div className="text-xl text-gray-600">Loading blockchain results...</div>
+    if (loading) return (
+        <div className="results-page-wrap">
+            <div className="ke-flag-bar" />
+            <div className="results-pub-header">
+                <div className="results-pub-header-inner">
+                    <div>
+                        <div className="results-pub-title">🗳️ IEBC Blockchain Voting System</div>
+                        <div className="results-pub-sub">Live Election Results · Kenya General Election 2027</div>
+                    </div>
                 </div>
             </div>
-        );
-    }
+            <div className="results-loading" style={{ height: 320 }}>
+                <div className="spin-icon">⛓️</div>
+                <p>Loading blockchain results...</p>
+            </div>
+        </div>
+    );
+
+    if (error || !data) return (
+        <div className="results-page-wrap">
+            <div className="ke-flag-bar" />
+            <div className="results-pub-header">
+                <div className="results-pub-header-inner">
+                    <div>
+                        <div className="results-pub-title">🗳️ IEBC Blockchain Voting System</div>
+                        <div className="results-pub-sub">Live Election Results · Kenya General Election 2027</div>
+                    </div>
+                    <button className="res-btn outline" onClick={() => navigate('/')}>Home</button>
+                </div>
+            </div>
+            <div className="results-error" style={{ height: 320 }}>
+                <div className="err-icon">⚠️</div>
+                <p>{error || 'No results available yet.'}</p>
+                <button className="res-btn green" onClick={loadResults}>Try Again</button>
+            </div>
+        </div>
+    );
+
+    const { positions, turnout, blockchain } = data;
+    const pos = positions[activeTab];
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            {/* Header */}
-            <div className="bg-blue-900 text-white shadow-lg">
-                <div className="container mx-auto px-6 py-4">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/')}>
-                            <div className="text-2xl">🗳️</div>
-                            <div>
-                                <h1 className="text-xl font-bold">IEBC Blockchain Voting System</h1>
-                                <p className="text-xs text-blue-200">Live Election Results</p>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={() => navigate('/')}
-                            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700"
-                        >
-                            Back to Home
-                        </button>
+        <div className="results-page-wrap">
+            <div className="ke-flag-bar" />
+
+            {/* Public header */}
+            <div className="results-pub-header">
+                <div className="results-pub-header-inner">
+                    <div style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+                        <div className="results-pub-title">🗳️ IEBC Blockchain Voting System</div>
+                        <div className="results-pub-sub">Live Election Results · Kenya General Election 2027</div>
+                    </div>
+                    <div className="btn-row">
+                        <button className="res-btn green" onClick={loadResults}>↻ Refresh</button>
+                        <button className="res-btn outline" onClick={() => navigate('/')}>Home</button>
                     </div>
                 </div>
             </div>
 
-            <div className="container mx-auto px-6 py-8">
-                {/* Blockchain Verification Banner */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <div className="text-2xl">✅</div>
-                            <div>
-                                <p className="font-semibold text-green-800">Blockchain Verified Results</p>
-                                <p className="text-sm text-green-600">Results are tamper-proof and auditable on the distributed ledger</p>
-                            </div>
+            <div className="results-content-wrap">
+
+                {/* Blockchain banner */}
+                <div className={`bc-banner ${blockchain.connected ? 'ok' : 'warn'}`}>
+                    <span style={{ fontSize: '1.3rem' }}>{blockchain.connected ? '✅' : '⚠️'}</span>
+                    <div>
+                        <div className="bc-banner-text">
+                            {blockchain.connected ? 'Results cross-verified between database and Ethereum blockchain' : 'Database Results (Blockchain offline)'}
                         </div>
-                        <div className="text-right">
-                            <p className="text-xs text-gray-600">Last Block Hash</p>
-                            <p className="text-xs font-mono text-gray-500">{results.lastBlockHash.slice(0, 20)}...</p>
+                        <div className="bc-banner-sub">
+                            {blockchain.connected ? 'All votes independently verifiable on-chain' : 'Connect Ganache to enable blockchain cross-verification'}
                         </div>
                     </div>
+                    {blockchain.contractAddress && (
+                        <span className="bc-address">{blockchain.contractAddress.slice(0, 10)}...{blockchain.contractAddress.slice(-6)}</span>
+                    )}
                 </div>
 
-                {/* Stats Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                        <div className="text-3xl mb-2">🗳️</div>
-                        <div className="text-2xl font-bold text-blue-900">{results.totalVotes.toLocaleString()}</div>
-                        <div className="text-gray-600">Total Votes Cast</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                        <div className="text-3xl mb-2">📊</div>
-                        <div className="text-2xl font-bold text-blue-900">{results.turnout}%</div>
-                        <div className="text-gray-600">Voter Turnout</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                        <div className="text-3xl mb-2">🏛️</div>
-                        <div className="text-2xl font-bold text-blue-900">{results.pollingStationsReported.toLocaleString()}</div>
-                        <div className="text-gray-600">Polling Stations Reporting</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                        <div className="text-3xl mb-2">⛓️</div>
-                        <div className="text-2xl font-bold text-blue-900">100%</div>
-                        <div className="text-gray-600">Blockchain Integrity</div>
-                    </div>
+                {/* Stats */}
+                <div className="stats-row">
+                    {[
+                        { icon: '🗳️', val: turnout.voted.toLocaleString(),           lbl: 'Votes Cast' },
+                        { icon: '📊', val: `${turnout.percentage}%`,                 lbl: 'Voter Turnout' },
+                        { icon: '🏛️', val: positions.length,                        lbl: 'Positions' },
+                        { icon: '⛓️', val: blockchain.connected ? '100%' : 'N/A',   lbl: 'Chain Integrity' },
+                    ].map(s => (
+                        <div key={s.lbl} className="stat-card">
+                            <div className="stat-icon-r">{s.icon}</div>
+                            <div className="stat-num">{s.val}</div>
+                            <div className="stat-label-r">{s.lbl}</div>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Presidential Results */}
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-                        <h2 className="text-xl font-bold text-white">Presidential Election Results</h2>
-                        <p className="text-blue-100 text-sm">Official results verified on the blockchain</p>
-                    </div>
-                    <div className="p-6">
-                        {results.president.map((candidate, index) => (
-                            <div key={index} className="mb-6">
-                                <div className="flex justify-between mb-2">
-                                    <div>
-                                        <span className="font-semibold">{candidate.candidate}</span>
-                                        <span className="text-gray-600 text-sm ml-2">({candidate.party})</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="font-bold">{candidate.votes.toLocaleString()}</span>
-                                        <span className="text-gray-600 ml-2">({candidate.percentage}%)</span>
+                {/* Position tabs */}
+                <div className="pos-tabs">
+                    {positions.map((p, i) => (
+                        <button key={p.positionId} onClick={() => setActiveTab(i)}
+                            className={`pos-tab ${activeTab === i ? 'active' : ''}`}>
+                            {p.positionName.replace('Member of ', '')}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Active position */}
+                {pos && (() => {
+                    const total  = pos.candidates.reduce((s, c) => s + c.dbVotes, 0);
+                    const winner = pos.candidates.find(c => c.dbVotes > 0);
+                    return (
+                        <div className="pos-card">
+                            <div className="pos-card-head">
+                                <div>
+                                    <div className="pos-card-title">{pos.positionName}</div>
+                                    <div className="pos-card-meta">
+                                        {total.toLocaleString()} votes
+                                        <span className="pos-level-badge" style={{ marginLeft: 8 }}>{pos.level}</span>
                                     </div>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                                    <div 
-                                        className={`h-4 rounded-full transition-all duration-1000 bg-${candidate.color}-600`}
-                                        style={{ 
-                                            width: `${candidate.percentage}%`,
-                                            backgroundColor: candidate.color === 'green' ? '#16a34a' :
-                                                           candidate.color === 'red' ? '#dc2626' :
-                                                           candidate.color === 'yellow' ? '#ca8a04' : '#854d0e'
-                                        }}
-                                    ></div>
-                                </div>
+                                {winner && <div className="leader-chip">🏆 Leader: {winner.name}</div>}
                             </div>
-                        ))}
-                    </div>
-                </div>
+                            <div className="pos-card-body">
+                                {pos.candidates.map((c, idx) => {
+                                    const pct  = total > 0 ? Math.round((c.dbVotes / total) * 1000) / 10 : 0;
+                                    const lead = idx === 0 && c.dbVotes > 0;
+                                    return (
+                                        <div key={c.id} className={`cand-row ${lead ? 'leading-row' : ''}`}>
+                                            <div className="cand-row-top">
+                                                <div className="cand-left">
+                                                    {lead && <span className="trophy">🏆</span>}
+                                                    <span className={`cand-name ${lead ? 'leader-name' : ''}`}>{c.name}</span>
+                                                    <span className="party-chip" style={{ background: partyColor(c.party) }}>{c.party}</span>
+                                                    {c.verified === true  && <span className="chain-verified">✓ Chain verified</span>}
+                                                    {c.verified === false && <span className="chain-mismatch">⚠ Mismatch</span>}
+                                                </div>
+                                                <div className="vote-right">
+                                                    <span className="vote-big">{c.dbVotes.toLocaleString()}</span>
+                                                    <span className="vote-pct">({pct}%)</span>
+                                                    {c.chainVotes != null && <div className="chain-votes">Chain: {c.chainVotes}</div>}
+                                                </div>
+                                            </div>
+                                            <div className="vote-bar">
+                                                <div className={`vote-bar-fill ${lead ? 'fill-green' : fillClass(c.party)}`}
+                                                    style={{ width: `${pct}%` }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {total === 0 && <div className="no-votes">No votes cast yet for this position.</div>}
+                            </div>
+                        </div>
+                    );
+                })()}
 
-                {/* Verification Section */}
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <div className="bg-gray-800 px-6 py-4">
-                        <h2 className="text-xl font-bold text-white">Verify Your Vote</h2>
-                        <p className="text-gray-300 text-sm">Enter your verification code to confirm your vote was recorded correctly</p>
+                {/* Leaders summary */}
+                {positions.some(p => p.winner?.dbVotes > 0) && (
+                    <div className="winners-section">
+                        <div className="winners-head">
+                            <h3>Current Leaders</h3>
+                            <p>Leading candidates per position</p>
+                        </div>
+                        <div className="winners-grid">
+                            {positions.map(p => p.winner?.dbVotes > 0 ? (
+                                <div key={p.positionId} className="winner-card">
+                                    <div className="winner-pos-label">{p.positionName}</div>
+                                    <div className="winner-name">🏆 {p.winner.name}</div>
+                                    <div className="winner-meta">
+                                        <span className="party-chip" style={{ background: partyColor(p.winner.party), fontSize: '0.68rem', padding: '1px 7px' }}>
+                                            {p.winner.party}
+                                        </span>
+                                    </div>
+                                    <div className="winner-votes">{p.winner.dbVotes.toLocaleString()} votes ({p.winner.percentage}%)</div>
+                                </div>
+                            ) : null)}
+                        </div>
                     </div>
-                    <div className="p-6">
-                        <div className="flex space-x-4">
-                            <input 
-                                type="text" 
-                                placeholder="Enter your verification code"
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                            />
-                            <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                Verify Vote
+                )}
+
+                {/* Vote verifier */}
+                <div className="verify-section">
+                    <div className="verify-head">
+                        <h3>Verify Your Vote</h3>
+                        <p>Enter your verification code to confirm your vote is on the blockchain</p>
+                    </div>
+                    <div className="verify-body">
+                        <div className="verify-row">
+                            <input className="verify-input" type="text" value={verifyCode}
+                                onChange={e => setVerifyCode(e.target.value.toUpperCase())}
+                                onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                                placeholder="Enter verification code e.g. V-AB3XY7KP" />
+                            <button className="verify-btn" onClick={handleVerify} disabled={verifying || !verifyCode.trim()}>
+                                {verifying ? 'Checking...' : 'Verify Vote'}
                             </button>
                         </div>
-                        <p className="text-sm text-gray-500 mt-4">
-                            Each vote is recorded on the Ethereum blockchain with a unique transaction hash. 
-                            Your verification code allows you to confirm your vote was counted without revealing your choice.
+                        {verifyResult && (
+                            <div className={`verify-result ${verifyResult.success ? 'ok' : 'err'}`}>
+                                {verifyResult.success ? (
+                                    <>
+                                        <strong>✅ Vote Verified on Blockchain</strong>
+                                        <div style={{ marginTop: 8 }}>
+                                            <div>Election: {verifyResult.vote.electionName}</div>
+                                            <div>Position: {verifyResult.vote.positionTitle}</div>
+                                            <div>TX: <span className="tx-mono">{verifyResult.vote.transactionHash?.slice(0, 24)}...</span></div>
+                                            <div>Voted: {new Date(verifyResult.vote.votedAt).toLocaleString()}</div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span>❌ {verifyResult.error}</span>
+                                )}
+                            </div>
+                        )}
+                        <p className="verify-note">
+                            Each vote is recorded on Ethereum with a unique transaction hash.
+                            Your code confirms your vote was counted without revealing your choice.
                         </p>
                     </div>
                 </div>
 
-                <div className="mt-6 text-center text-sm text-gray-500">
-                    <p>Last updated: {lastUpdated} | Results are final and verifiable on the blockchain</p>
+                <div className="results-foot">
+                    Last updated: {lastUpdated} · Auto-refreshes every 30 seconds · Results verifiable on the blockchain
                 </div>
             </div>
         </div>

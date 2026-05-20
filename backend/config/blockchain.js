@@ -1,113 +1,66 @@
 const { Web3 } = require('web3');
 const fs = require('fs');
 const path = require('path');
-module.exports = require('../services/blockchainService');
-
-// Load contract artifacts
-let contractAddress = null;
-let contractABI = null;
-
-try {
-    const contractData = JSON.parse(
-        fs.readFileSync(path.resolve(__dirname, '../../smart-contracts/contract-address.json'), 'utf8')
-    );
-    contractAddress = contractData.address;
-    contractABI = contractData.abi;
-    console.log('📦 Contract loaded:', contractAddress);
-} catch (error) {
-    console.warn('⚠️ Contract not found. Please deploy the contract first.');
-}
 
 // Connect to Ganache
 const web3 = new Web3('http://127.0.0.1:7545');
 
+let contractAddress = null;
+let contractABI = null;
 let votingContract = null;
-if (contractAddress && contractABI) {
-    votingContract = new web3.eth.Contract(contractABI, contractAddress);
+
+// Load contract if exists
+try {
+    const contractPath = path.resolve(__dirname, '../../smart-contracts/abi/contract.json');
+    if (fs.existsSync(contractPath)) {
+        const contractData = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+        contractAddress = contractData.address;
+        contractABI = contractData.abi;
+        votingContract = new web3.eth.Contract(contractABI, contractAddress);
+        console.log('📦 Contract loaded from:', contractPath);
+        console.log('📍 Contract address:', contractAddress);
+    } else {
+        console.log('⚠️ Contract not found. Please deploy the contract first.');
+    }
+} catch (error) {
+    console.log('⚠️ Error loading contract:', error.message);
 }
 
-// Generate verification code
-function generateVerificationCode() {
-    return 'V' + Math.random().toString(36).substring(2, 10).toUpperCase();
-}
-
-// Cast vote on blockchain
-async function castVoteOnBlockchain(electionId, positionId, candidateId, voterAddress, privateKey) {
+// Check blockchain connection
+async function checkBlockchainConnection() {
     try {
-        const verificationCode = generateVerificationCode();
-        
-        // Call smart contract vote function
-        const tx = await votingContract.methods.vote(
-            electionId,
-            positionId,
-            candidateId,
-            verificationCode
-        ).send({
-            from: voterAddress,
-            gas: 300000,
-            gasPrice: await web3.eth.getGasPrice()
-        });
-        
+        const isListening = await web3.eth.net.isListening();
+        const blockNumber = await web3.eth.getBlockNumber();
         return {
-            success: true,
-            transactionHash: tx.transactionHash,
-            verificationCode: verificationCode,
-            blockNumber: tx.blockNumber
+            connected: isListening,
+            blockNumber: blockNumber,
+            networkId: await web3.eth.net.getId(),
+            contractAddress: contractAddress || 'Not deployed'
         };
     } catch (error) {
-        console.error('Blockchain vote error:', error);
         return {
-            success: false,
-            error: error.message
+            connected: false,
+            error: error.message,
+            contractAddress: contractAddress || 'Not deployed'
         };
     }
 }
 
-// Get vote count from blockchain
-async function getBlockchainVoteCount(electionId, positionId, candidateId) {
-    try {
-        const count = await votingContract.methods.getVoteCount(electionId, positionId, candidateId).call();
-        return parseInt(count);
-    } catch (error) {
-        console.error('Error getting vote count:', error);
-        return 0;
-    }
+// Get contract instance
+function getContract() {
+    return votingContract;
 }
 
-// Verify vote on blockchain
-async function verifyVote(electionId, positionId, voterAddress) {
-    try {
-        const hasVoted = await votingContract.methods.hasVotedForPosition(electionId, voterAddress, positionId).call();
-        return hasVoted;
-    } catch (error) {
-        console.error('Error verifying vote:', error);
-        return false;
-    }
-}
-
-// Get election details
-async function getElectionDetails(electionId) {
-    try {
-        const details = await votingContract.methods.getElection(electionId).call();
-        return {
-            name: details[0],
-            startTime: parseInt(details[1]),
-            endTime: parseInt(details[2]),
-            isActive: details[3]
-        };
-    } catch (error) {
-        console.error('Error getting election details:', error);
-        return null;
-    }
+// Get web3 instance
+function getWeb3() {
+    return web3;
 }
 
 module.exports = {
     web3,
     votingContract,
     contractAddress,
-    castVoteOnBlockchain,
-    getBlockchainVoteCount,
-    verifyVote,
-    getElectionDetails,
-    generateVerificationCode
+    getContract,
+    getWeb3,
+    checkBlockchainConnection
 };

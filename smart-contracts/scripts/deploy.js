@@ -1,15 +1,54 @@
 const Web3 = require('web3');
 const fs = require('fs');
 const path = require('path');
+// Load backend .env without requiring the dotenv package
+try {
+    const envFile = fs.readFileSync(path.resolve(__dirname, '../../backend/.env'), 'utf8');
+    envFile.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx < 1) return;
+        const key = trimmed.slice(0, eqIdx).trim();
+        const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+        if (key && !(key in process.env)) process.env[key] = val;
+    });
+} catch { /* .env not found — continue with Ganache defaults */ }
 
-// Connect to Ganache
-const web3 = new Web3('http://127.0.0.1:7545');
+const RPC_URL = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:7545';
+const web3 = new Web3(RPC_URL);
 
 async function deploy() {
     try {
-        // Get accounts from Ganache
         const accounts = await web3.eth.getAccounts();
-        const adminAccount = accounts[0];
+
+        // Prefer the server's configured address so the contract admin
+        // matches the address that will later sign vote transactions.
+        // Falls back to Ganache accounts[0] if the env vars are not set.
+        let adminAccount;
+        const pk = process.env.SERVER_ETH_PRIVATE_KEY || '';
+        if (process.env.SERVER_ETH_ADDRESS && pk.replace('0x', '').length === 64) {
+            adminAccount = process.env.SERVER_ETH_ADDRESS;
+            web3.eth.accounts.wallet.add(pk);
+
+            // Fund the server address from Ganache accounts[0] if balance is low
+            const bal = BigInt(await web3.eth.getBalance(adminAccount));
+            if (bal < BigInt(web3.utils.toWei('1', 'ether'))) {
+                console.log('Funding server address from Ganache accounts[0]…');
+                await web3.eth.sendTransaction({
+                    from: accounts[0],
+                    to: adminAccount,
+                    value: web3.utils.toWei('10', 'ether'),
+                    gas: 21000
+                });
+                console.log('Funded with 10 ETH');
+            }
+        } else {
+            adminAccount = accounts[0];
+            console.log('⚠️  SERVER_ETH_ADDRESS not set — deploying from Ganache accounts[0]');
+            console.log('   Set SERVER_ETH_ADDRESS and SERVER_ETH_PRIVATE_KEY in backend/.env');
+            console.log('   then redeploy so the admin matches the signing key.\n');
+        }
         
         console.log('Deploying from account:', adminAccount);
         const balance = await web3.eth.getBalance(adminAccount);

@@ -394,3 +394,33 @@
         width: 100%;
     }
 }
+
+/* Document thumbnails in profile */
+.verification-images .detail-value {
+    flex: 1;
+}
+
+.doc-thumbnails {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.doc-thumb {
+    text-align: center;
+}
+
+.doc-thumb img {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #00A651;
+    display: block;
+}
+
+.doc-thumb small {
+    font-size: 0.7rem;
+    color: #065F46;
+    font-weight: 600;
+}

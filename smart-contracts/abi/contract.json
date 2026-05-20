@@ -1,5 +1,5 @@
 {
-  "address": "0xAf55147Ca4fEd94d4F71623887E04e8A3632debd",
+  "address": "0xCE091aCFD71c8F7b827Ad717DbAa7b608eAac268",
   "abi": [
     {
       "inputs": [],
@@ -32,9 +32,9 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "voter",
-          "type": "address"
+          "internalType": "bytes32",
+          "name": "voterIdHash",
+          "type": "bytes32"
         },
         {
           "indexed": true,
@@ -51,7 +51,7 @@
       ],
       "name": "VoteCast",
       "type": "event",
-      "signature": "0xb4cfecf70861b7b150d8337780d34fb4cbc2114b5fb1fe51a5c5fca1849f7274"
+      "signature": "0x03527ab37810ea1e67b3626147543fe1779458d76981a984fc7e03ed1319c0a8"
     },
     {
       "inputs": [],
@@ -285,9 +285,9 @@
     {
       "inputs": [
         {
-          "internalType": "address",
+          "internalType": "bytes32",
           "name": "",
-          "type": "address"
+          "type": "bytes32"
         },
         {
           "internalType": "uint256",
@@ -306,7 +306,33 @@
       "stateMutability": "view",
       "type": "function",
       "constant": true,
-      "signature": "0x9d261a78"
+      "signature": "0x5c8d323a"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "_voterIdHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_positionId",
+          "type": "uint256"
+        }
+      ],
+      "name": "hasVoterVotedForPosition",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true,
+      "signature": "0x5043fd9c"
     },
     {
       "inputs": [],
@@ -387,18 +413,18 @@
           "type": "uint256"
         },
         {
-          "internalType": "string",
-          "name": "_verificationCode",
-          "type": "string"
+          "internalType": "bytes32",
+          "name": "_voterIdHash",
+          "type": "bytes32"
         }
       ],
       "name": "vote",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
-      "signature": "0xa1bbfc05"
+      "signature": "0x8c881eeb"
     }
   ],
   "network": "ganache",
-  "deployedAt": "2026-05-16T07:13:07.048Z"
+  "deployedAt": "2026-05-20T17:02:15.548Z"
 }

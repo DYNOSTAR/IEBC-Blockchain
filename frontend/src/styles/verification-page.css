@@ -279,16 +279,139 @@
     .verification-container {
         margin: 0;
     }
-    
+
     .progress-steps {
         max-width: 100%;
     }
-    
+
     .step-label {
         font-size: 0.6rem;
     }
-    
+
     .face-options {
         flex-direction: column;
     }
+}
+
+/* ── Embedded verification page (inside VoterPortal) ── */
+.verification-page-container {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.step-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+/* Dev OTP hint */
+.dev-hint {
+    background: #FEF3C7;
+    border: 1px solid #F59E0B;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    color: #92400E;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dev-hint strong {
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+}
+
+/* Step already completed */
+.step-complete {
+    text-align: center;
+    padding: 20px;
+}
+
+.step-complete p {
+    color: #065F46;
+    font-weight: 600;
+    margin: 10px 0;
+}
+
+.verified-preview {
+    border: 3px solid #00A651;
+    max-height: 200px;
+}
+
+.face-preview {
+    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+}
+
+/* Fully verified */
+.fully-verified {
+    padding: 40px;
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    border-radius: 12px;
+    margin: 10px 0;
+}
+
+.verified-badge {
+    font-size: 4rem;
+    margin-bottom: 15px;
+}
+
+.fully-verified h3 {
+    color: #065F46;
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+}
+
+/* Biometric */
+.biometric-icon-large {
+    font-size: 5rem;
+    margin-bottom: 15px;
+}
+
+.biometric-fallback-note {
+    margin: 10px 0 20px;
+    color: #9CA3AF;
+}
+
+/* Inline link-style button */
+.link-btn {
+    background: none;
+    border: none;
+    color: #2A5298;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 0;
+}
+
+/* Step progress text in footer */
+.step-progress-text {
+    font-size: 0.85rem;
+    color: #9CA3AF;
+    margin-left: 20px;
+}
+
+.verification-footer {
+    display: flex;
+    align-items: center;
+}
+
+.cancel-btn {
+    background: #E2E8F0;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.step-indicator {
+    cursor: default;
 }
