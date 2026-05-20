@@ -4,8 +4,8 @@ class Vote {
     // Record vote in both database and blockchain
     static async castVote(voterId, electionId, positionId, candidateId, transactionHash) {
         const query = `
-            INSERT INTO votes (voter_id, election_id, position_id, candidate_id, transaction_hash, timestamp)
-            VALUES ($1, $2, $3, $4, $5, NOW())
+            INSERT INTO votes (voter_id, election_id, position_id, candidate_id, transaction_hash)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
         const values = [voterId, electionId, positionId, candidateId, transactionHash];
@@ -16,7 +16,7 @@ class Vote {
     // Get votes by election
     static async getVotesByElection(electionId) {
         const query = `
-            SELECT v.*, c.name as candidate_name, p.title as position_title, 
+            SELECT v.*, c.name as candidate_name, p.name as position_title,
                    u.first_name, u.last_name
             FROM votes v
             JOIN candidates c ON v.candidate_id = c.id

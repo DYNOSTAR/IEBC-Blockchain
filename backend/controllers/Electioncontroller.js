@@ -43,8 +43,12 @@ const getElectionById = async (req, res) => {
     }
 };
 
-// ── Internal helper — correct column names ─────────────────────
-async function getPositionsWithCandidates(electionId) {
+// ── Internal helper ─────────────────────────────────────────────
+// location = { countyId, constituencyId, wardId } — all optional.
+// When a filter is provided, candidates are narrowed to that area.
+// Candidates with NULL location fields are shown regardless (demo/backward-compat).
+async function getPositionsWithCandidates(electionId, location = {}) {
+    const { countyId, constituencyId, wardId } = location;
     const result = await pool.query(
         `SELECT
             p.id,
@@ -55,13 +59,27 @@ async function getPositionsWithCandidates(electionId) {
             COALESCE(
                 json_agg(
                     json_build_object(
-                        'id',          c.id,
-                        'name',        c.name,
-                        'party',       c.symbol,
-                        'symbol',      c.symbol,
-                        'description', c.description
+                        'id',              c.id,
+                        'name',            c.name,
+                        'party',           c.symbol,
+                        'symbol',          c.symbol,
+                        'description',     c.description,
+                        'county_id',       c.county_id,
+                        'constituency_id', c.constituency_id,
+                        'ward_id',         c.ward_id
+                    ) ORDER BY c.name
+                ) FILTER (
+                    WHERE c.id IS NOT NULL AND c.is_active = true
+                    AND (
+                        p.level = 'national'
+                        OR (p.level = 'county'
+                            AND ($2::int IS NULL OR c.county_id IS NULL OR c.county_id = $2::int))
+                        OR (p.level = 'constituency'
+                            AND ($3::int IS NULL OR c.constituency_id IS NULL OR c.constituency_id = $3::int))
+                        OR (p.level = 'ward'
+                            AND ($4::int IS NULL OR c.ward_id IS NULL OR c.ward_id = $4::int))
                     )
-                ) FILTER (WHERE c.id IS NOT NULL AND c.is_active = true),
+                ),
                 '[]'
             ) AS candidates
          FROM positions p
@@ -71,7 +89,9 @@ async function getPositionsWithCandidates(electionId) {
          WHERE p.election_id = $1
          GROUP BY p.id, p.name, p.description, p.display_order, p.level
          ORDER BY p.display_order`,
-        [electionId]
+        [electionId, countyId ? parseInt(countyId) : null,
+                     constituencyId ? parseInt(constituencyId) : null,
+                     wardId ? parseInt(wardId) : null]
     );
     return result.rows;
 }
@@ -79,8 +99,9 @@ async function getPositionsWithCandidates(electionId) {
 // ── GET /api/elections/:id/positions ──────────────────────────
 const getPositions = async (req, res) => {
     const { id } = req.params;
+    const { countyId, constituencyId, wardId } = req.query;
     try {
-        const positions = await getPositionsWithCandidates(id);
+        const positions = await getPositionsWithCandidates(id, { countyId, constituencyId, wardId });
         res.json({ success: true, positions });
     } catch (error) {
         console.error('Get positions error:', error);

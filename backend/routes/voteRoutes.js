@@ -179,6 +179,64 @@ router.post('/verify', async (req, res) => {
     }
 });
 
+// ── GET /api/votes/my-votes ──────────────────────────────────
+// Returns the logged-in voter's existing votes for the active election
+router.get('/my-votes', authenticate, async (req, res) => {
+    const userId = req.user.id;
+    try {
+        const electionResult = await pool.query(
+            `SELECT id FROM elections
+             WHERE status IN ('active','results_published')
+             AND start_date <= NOW() AND end_date >= NOW()
+             ORDER BY start_date DESC LIMIT 1`
+        );
+        if (electionResult.rows.length === 0) {
+            return res.json({ success: true, votes: [] });
+        }
+        const electionId = electionResult.rows[0].id;
+
+        const voterResult = await pool.query(
+            `SELECT id FROM voters WHERE user_id = $1`, [userId]
+        );
+        if (voterResult.rows.length === 0) {
+            return res.json({ success: true, votes: [] });
+        }
+        const voterId = voterResult.rows[0].id;
+
+        const votesResult = await pool.query(
+            `SELECT v.position_id, v.candidate_id, v.transaction_hash,
+                    v.verification_code, v.created_at,
+                    c.name AS candidate_name, c.symbol AS party,
+                    p.name AS position_name, p.level, p.display_order
+             FROM votes v
+             JOIN candidates c ON v.candidate_id = c.id
+             JOIN positions p ON v.position_id = p.id
+             WHERE v.voter_id = $1 AND v.election_id = $2
+             ORDER BY p.display_order`,
+            [voterId, electionId]
+        );
+
+        res.json({
+            success: true,
+            electionId,
+            votes: votesResult.rows.map(r => ({
+                positionId:       r.position_id,
+                positionName:     r.position_name,
+                level:            r.level,
+                displayOrder:     r.display_order,
+                candidateId:      r.candidate_id,
+                candidateName:    r.candidate_name,
+                party:            r.party,
+                verificationCode: r.verification_code,
+                transactionHash:  r.transaction_hash,
+                votedAt:          r.created_at
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ── GET /api/votes/election-status ───────────────────────────
 router.get('/election-status', authenticate, async (_req, res) => {
     try {

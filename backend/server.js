@@ -30,6 +30,22 @@ app.use('/api/admin',       adminRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/locations',   locationRoutes);
 
+// ── Public: current active election (no auth) ────────────────
+app.get('/api/elections/public/current', async (req, res) => {
+    try {
+        const r = await pool.query(
+            `SELECT id, name, status, start_date, end_date
+             FROM elections
+             WHERE status IN ('active','results_published')
+             ORDER BY start_date DESC LIMIT 1`
+        );
+        if (!r.rows.length) return res.json({ success: false, error: 'No active election' });
+        res.json({ success: true, election: r.rows[0] });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // ── Public live results (no auth — landing page preview) ─────
 app.get('/api/live-results', async (req, res) => {
     try {

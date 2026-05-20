@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node -e ' *)",
-      "Bash(dir \"c:\\\\Users\\\\Administrator\\\\Desktop\\\\Projects\\\\IEBC-Blockchain\\\\smart-contracts\" /s /b)"
+      "Bash(dir \"c:\\\\Users\\\\Administrator\\\\Desktop\\\\Projects\\\\IEBC-Blockchain\\\\smart-contracts\" /s /b)",
+      "Bash(dir \"c:\\\\Users\\\\Administrator\\\\Desktop\\\\Projects\\\\IEBC-Blockchain\\\\frontend\\\\src\\\\components\\\\Voter\")"
     ]
   }
 }

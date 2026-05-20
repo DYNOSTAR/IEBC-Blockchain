@@ -172,10 +172,16 @@ const verifyVoteByCode = async (req, res) => {
 };
 
 // ── Get results with blockchain cross-verification + winners ──
+// Accepts ?countyId=X&constituencyId=Y&wardId=Z to scope candidates to one area.
+// Candidates with NULL location fields are included regardless of filter (backward-compat).
 const getElectionResults = async (req, res) => {
     const { id: electionId } = req.params;
+    const countyId       = req.query.countyId       ? parseInt(req.query.countyId)       : null;
+    const constituencyId = req.query.constituencyId ? parseInt(req.query.constituencyId) : null;
+    const wardId         = req.query.wardId         ? parseInt(req.query.wardId)         : null;
+
     try {
-        // 1. Get all votes from DB grouped by position + candidate
+        // 1. Get votes from DB — scoped to the requested location
         const dbResult = await pool.query(
             `SELECT
                 p.id                       AS position_id,
@@ -189,13 +195,25 @@ const getElectionResults = async (req, res) => {
                 COUNT(v.id)                AS db_votes
              FROM positions p
              JOIN candidates c
-                ON c.position_id = p.id AND c.election_id = $1 AND c.is_active = true
+                ON  c.position_id = p.id
+                AND c.election_id = $1
+                AND c.is_active   = true
+                AND (
+                    p.level = 'national'
+                    OR (p.level = 'county'
+                        AND ($2::int IS NULL OR c.county_id IS NULL OR c.county_id = $2::int))
+                    OR (p.level = 'constituency'
+                        AND ($3::int IS NULL OR c.constituency_id IS NULL OR c.constituency_id = $3::int))
+                    OR (p.level = 'ward'
+                        AND ($4::int IS NULL OR c.ward_id IS NULL OR c.ward_id = $4::int))
+                )
              LEFT JOIN votes v
                 ON v.candidate_id = c.id AND v.election_id = $1
              WHERE p.election_id = $1
-             GROUP BY p.id, p.name, p.display_order, p.level, c.id, c.blockchain_candidate_id, c.name, c.symbol
+             GROUP BY p.id, p.name, p.display_order, p.level,
+                      c.id, c.blockchain_candidate_id, c.name, c.symbol
              ORDER BY p.display_order ASC, db_votes DESC`,
-            [electionId]
+            [electionId, countyId, constituencyId, wardId]
         );
 
         // 2. Get blockchain vote counts for cross-verification (use blockchain_candidate_id, not DB id)

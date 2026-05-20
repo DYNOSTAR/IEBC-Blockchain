@@ -50,15 +50,26 @@ export const authAPI = {
         api.post('/auth/logout')
 };
 
+// Build query string from a location object, omitting nulls/empty strings
+const locationParams = (loc = {}) => {
+    const p = {};
+    if (loc.countyId)       p.countyId       = loc.countyId;
+    if (loc.constituencyId) p.constituencyId = loc.constituencyId;
+    if (loc.wardId)         p.wardId         = loc.wardId;
+    return p;
+};
+
 export const electionAPI = {
     getActive: () =>
         api.get('/elections/active'),
     getById: (id) =>
         api.get(`/elections/${id}`),
-    getPositions: (electionId) =>
-        api.get(`/elections/${electionId}/positions`),
-    getResults: (electionId) =>
-        api.get(`/elections/results/${electionId}`),
+    // location = { countyId, constituencyId, wardId } — all optional
+    getPositions: (electionId, location = {}) =>
+        api.get(`/elections/${electionId}/positions`, { params: locationParams(location) }),
+    // location filter scopes candidates to a specific area
+    getResults: (electionId, location = {}) =>
+        api.get(`/elections/results/${electionId}`, { params: locationParams(location) }),
     getAll: () =>
         api.get('/elections'),
     create: (data) =>
@@ -74,6 +85,8 @@ export const voteAPI = {
         api.post('/votes/cast', { electionId, positionId, candidateId }),
     verify: (verificationCode) =>
         api.post('/votes/verify', { verificationCode }),
+    getMyVotes: () =>
+        api.get('/votes/my-votes'),
     getCounts: (electionId) =>
         api.get(`/votes/counts/${electionId}`),
     getBlockchainStatus: (electionId) =>
