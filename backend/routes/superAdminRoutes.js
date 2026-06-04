@@ -414,13 +414,14 @@ router.get('/statistics', async (req, res) => {
 router.get('/admins', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT u.id, u.national_id, u.first_name, u.last_name, u.email, u.phone, 
+            SELECT DISTINCT ON (u.id)
+                   u.id, u.national_id, u.first_name, u.last_name, u.email, u.phone,
                    u.role, u.is_active, u.created_at, u.last_login,
                    ap.department, ap.position
             FROM users u
             LEFT JOIN admin_profiles ap ON u.id = ap.user_id
-            WHERE u.role IN ('admin', 'iebc_official')
-            ORDER BY u.created_at DESC
+            WHERE u.role IN ('admin', 'iebc_official', 'super_admin')
+            ORDER BY u.id, u.created_at DESC
         `);
         res.json({ success: true, admins: result.rows });
     } catch (error) {
@@ -480,16 +481,35 @@ router.get('/audit-logs', async (req, res) => {
     const { limit = 100, offset = 0 } = req.query;
     try {
         const result = await pool.query(`
-            SELECT al.*, u.first_name, u.last_name, u.email
-            FROM admin_audit_logs al
-            LEFT JOIN users u ON al.admin_id = u.id
-            ORDER BY al.timestamp DESC
+            SELECT al.id, al.action, al.details, al.ip_address, al.created_at,
+                   u.first_name, u.last_name, u.email, u.role
+            FROM audit_logs al
+            LEFT JOIN users u ON al.user_id = u.id
+            ORDER BY al.created_at DESC
             LIMIT $1 OFFSET $2
-        `, [limit, offset]);
-        
-        res.json({ success: true, auditLogs: result.rows });
+        `, [parseInt(limit), parseInt(offset)]);
+        res.json({ success: true, logs: result.rows });
     } catch (error) {
         console.error('Error fetching audit logs:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.get('/county-turnout', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT co.name AS county_name,
+                   co.registered_voters,
+                   COUNT(DISTINCT v.voter_id) AS votes_cast
+            FROM counties co
+            LEFT JOIN voters vt  ON vt.county_id = co.id
+            LEFT JOIN votes  v   ON v.voter_id   = vt.id
+            GROUP BY co.id, co.name, co.registered_voters
+            ORDER BY co.name
+        `);
+        res.json({ success: true, turnout: result.rows });
+    } catch (error) {
+        console.error('County turnout error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

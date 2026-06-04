@@ -1,303 +1,173 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import SuperAdminLayout from '../SuperAdminLayout';
-import '../../../styles/super-admin-voters.css';
+
+const API  = 'http://localhost:5000/api';
+const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+const PAGE_SIZE = 25;
+
+const VerBadge = ({ level }) => {
+    const labels = { 0: 'Unverified', 1: 'OTP', 2: 'ID Card', 3: 'Face', 4: 'Biometric' };
+    const colors = { 0: 'grey', 1: 'amber', 2: 'amber', 3: 'blue', 4: 'green' };
+    return <span className={`sa-badge ${colors[level] || 'grey'}`}>{labels[level] || 'Unknown'}</span>;
+};
 
 const SuperAdminVoters = () => {
-    const [voters, setVoters] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filteredVoters, setFilteredVoters] = useState([]);
-    const [selectedCounty, setSelectedCounty] = useState('');
-    const [selectedConstituency, setSelectedConstituency] = useState('');
+    const [voters,   setVoters]   = useState([]);
     const [counties, setCounties] = useState([]);
-    const [constituencies, setConstituencies] = useState([]);
-    const [stats, setStats] = useState({
-        total: 0,
-        voted: 0,
-        notVoted: 0,
-        verified: 0,
-        notVerified: 0
-    });
+    const [consts,   setConsts]   = useState([]);
+    const [loading,  setLoading]  = useState(true);
+    const [search,   setSearch]   = useState('');
+    const [county,   setCounty]   = useState('');
+    const [constId,  setConstId]  = useState('');
+    const [status,   setStatus]   = useState('');
+    const [page,     setPage]     = useState(1);
 
     useEffect(() => {
-        loadVoters();
-        loadCounties();
+        Promise.all([
+            axios.get(`${API}/super-admin/voters`, auth()),
+            axios.get(`${API}/super-admin/counties`, auth()),
+        ]).then(([v, c]) => {
+            setVoters(v.data.voters || []);
+            setCounties(c.data.counties || []);
+        }).finally(() => setLoading(false));
     }, []);
 
     useEffect(() => {
-        filterVoters();
-    }, [searchTerm, selectedCounty, selectedConstituency, voters]);
+        setConstId(''); setConsts([]);
+        if (!county) return;
+        axios.get(`${API}/super-admin/constituencies/by-county/${county}`, auth()).then(r => {
+            setConsts(r.data.constituencies || []);
+        }).catch(() => {});
+    }, [county]);
 
-    const loadVoters = async () => {
-        try {
-            setLoading(true);
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/super-admin/voters', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            if (response.data.success) {
-                setVoters(response.data.voters);
-                calculateStats(response.data.voters);
-            }
-        } catch (error) {
-            console.error('Error loading voters:', error);
-            alert('Failed to load voters data');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const filtered = useMemo(() => {
+        const q = search.toLowerCase();
+        return voters.filter(v => {
+            if (q && !`${v.full_name || ''} ${v.national_id || ''} ${v.email || ''}`.toLowerCase().includes(q)) return false;
+            if (county  && String(v.county_id) !== county) return false;
+            if (constId && String(v.constituency_id) !== constId) return false;
+            if (status === 'voted'     && !v.has_voted) return false;
+            if (status === 'not_voted' && v.has_voted)  return false;
+            if (status === 'verified'  && !v.is_verified) return false;
+            return true;
+        });
+    }, [voters, search, county, constId, status]);
 
-    const loadCounties = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/super-admin/counties', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setCounties(response.data.counties);
-            }
-        } catch (error) {
-            console.error('Error loading counties:', error);
-        }
-    };
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const paged      = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
 
-    const loadConstituencies = async (countyId) => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:5000/api/super-admin/constituencies/by-county/${countyId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setConstituencies(response.data.constituencies);
-            }
-        } catch (error) {
-            console.error('Error loading constituencies:', error);
-        }
-    };
+    const stats = useMemo(() => ({
+        total:    voters.length,
+        voted:    voters.filter(v => v.has_voted).length,
+        verified: voters.filter(v => v.is_verified).length,
+    }), [voters]);
 
-    const calculateStats = (votersList) => {
-        const total = votersList.length;
-        const voted = votersList.filter(v => v.has_voted).length;
-        const notVoted = total - voted;
-        const verified = votersList.filter(v => v.is_verified).length;
-        const notVerified = total - verified;
-        
-        setStats({ total, voted, notVoted, verified, notVerified });
-    };
-
-    const filterVoters = () => {
-        let filtered = [...voters];
-        
-        if (searchTerm) {
-            filtered = filtered.filter(voter => 
-                voter.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                voter.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                voter.national_id?.includes(searchTerm) ||
-                voter.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                voter.phone?.includes(searchTerm)
-            );
-        }
-        
-        if (selectedCounty) {
-            filtered = filtered.filter(voter => voter.county_id == selectedCounty);
-        }
-        
-        if (selectedConstituency) {
-            filtered = filtered.filter(voter => voter.constituency_id == selectedConstituency);
-        }
-        
-        setFilteredVoters(filtered);
-    };
-
-    const handleCountyChange = (e) => {
-        const countyId = e.target.value;
-        setSelectedCounty(countyId);
-        setSelectedConstituency('');
-        if (countyId) {
-            loadConstituencies(countyId);
-        } else {
-            setConstituencies([]);
-        }
-    };
-
-    const exportToCSV = () => {
-        const headers = ['National ID', 'First Name', 'Last Name', 'Email', 'Phone', 'County', 'Constituency', 'Ward', 'Voted', 'Verified', 'Registration Date'];
-        const csvData = filteredVoters.map(voter => [
-            voter.national_id,
-            voter.first_name,
-            voter.last_name,
-            voter.email || '',
-            voter.phone || '',
-            voter.county_name || '',
-            voter.constituency_name || '',
-            voter.ward_name || '',
-            voter.has_voted ? 'Yes' : 'No',
-            voter.is_verified ? 'Yes' : 'No',
-            new Date(voter.registered_at).toLocaleDateString()
-        ]);
-        
-        const csvContent = [headers, ...csvData].map(row => row.join(',')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `voters_data_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
-    if (loading) {
-        return (
-            <SuperAdminLayout>
-                <div className="admin-loading">Loading voters data...</div>
-            </SuperAdminLayout>
-        );
-    }
+    if (loading) return <SuperAdminLayout><div className="sa-loading"><div className="sa-spin">↻</div></div></SuperAdminLayout>;
 
     return (
         <SuperAdminLayout>
-            <div className="super-admin-voters-page">
-                <div className="page-header">
+            <div className="sa-page">
+                <div className="sa-page-header">
                     <div>
-                        <h1>👤 Voters Data Management</h1>
-                        <p>View and manage all registered voters (Super Admin - Country Level)</p>
+                        <h1 className="sa-page-title">Voters Registry</h1>
+                        <p className="sa-page-sub">{voters.length.toLocaleString()} registered voters</p>
                     </div>
-                    <button className="export-btn" onClick={exportToCSV}>
-                        📥 Export to CSV
-                    </button>
+                    <button className="sa-btn outline" onClick={() => {
+                        const csv = [['National ID','Name','Email','County','Voted','Verified'],
+                            ...filtered.map(v => [v.national_id, v.full_name || `${v.first_name||''} ${v.last_name||''}`, v.email||'', v.county_name||'', v.has_voted?'Yes':'No', v.is_verified?'Yes':'No'])
+                        ].map(r => r.join(',')).join('\n');
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+                        a.download = 'voters.csv'; a.click();
+                    }}>↓ Export CSV</button>
                 </div>
 
-                {/* Statistics Cards */}
-                <div className="stats-grid">
-                    <div className="stat-card total">
-                        <div className="stat-icon">👥</div>
-                        <div className="stat-info">
-                            <div className="stat-value">{stats.total.toLocaleString()}</div>
-                            <div className="stat-title">Total Voters</div>
-                        </div>
-                    </div>
-                    <div className="stat-card voted">
-                        <div className="stat-icon">🗳️</div>
-                        <div className="stat-info">
-                            <div className="stat-value">{stats.voted.toLocaleString()}</div>
-                            <div className="stat-title">Voted</div>
-                            <div className="stat-percent">{stats.total ? Math.round((stats.voted / stats.total) * 100) : 0}%</div>
-                        </div>
-                    </div>
-                    <div className="stat-card not-voted">
-                        <div className="stat-icon">⏳</div>
-                        <div className="stat-info">
-                            <div className="stat-value">{stats.notVoted.toLocaleString()}</div>
-                            <div className="stat-title">Not Voted Yet</div>
-                            <div className="stat-percent">{stats.total ? Math.round((stats.notVoted / stats.total) * 100) : 0}%</div>
-                        </div>
-                    </div>
-                    <div className="stat-card verified">
-                        <div className="stat-icon">✅</div>
-                        <div className="stat-info">
-                            <div className="stat-value">{stats.verified.toLocaleString()}</div>
-                            <div className="stat-title">Verified</div>
-                        </div>
-                    </div>
-                    <div className="stat-card not-verified">
-                        <div className="stat-icon">⚠️</div>
-                        <div className="stat-info">
-                            <div className="stat-value">{stats.notVerified.toLocaleString()}</div>
-                            <div className="stat-title">Not Verified</div>
-                        </div>
-                    </div>
+                {/* Quick stats */}
+                <div className="sa-stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 20 }}>
+                    <div className="sa-stat green"><div className="sa-stat-val">{stats.voted.toLocaleString()}</div><div className="sa-stat-label">Voted</div></div>
+                    <div className="sa-stat amber"><div className="sa-stat-val">{(stats.total - stats.voted).toLocaleString()}</div><div className="sa-stat-label">Not Voted</div></div>
+                    <div className="sa-stat"><div className="sa-stat-val">{stats.verified.toLocaleString()}</div><div className="sa-stat-label">Verified</div></div>
                 </div>
 
                 {/* Filters */}
-                <div className="filters-section">
-                    <div className="filter-group">
-                        <label>Search</label>
-                        <input
-                            type="text"
-                            placeholder="Search by name, ID, email, or phone..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="search-input"
-                        />
+                <div className="sa-filter-row">
+                    <div className="sa-search" style={{ flex: 1, maxWidth: 340 }}>
+                        <span style={{ color: '#9CA3AF', fontSize: 13 }}>🔍</span>
+                        <input placeholder="Name, national ID, or email…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
                     </div>
-                    <div className="filter-group">
-                        <label>County</label>
-                        <select value={selectedCounty} onChange={handleCountyChange}>
-                            <option value="">All Counties</option>
-                            {counties.map(county => (
-                                <option key={county.id} value={county.id}>{county.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <label>Constituency</label>
-                        <select 
-                            value={selectedConstituency} 
-                            onChange={(e) => setSelectedConstituency(e.target.value)}
-                            disabled={!selectedCounty}
-                        >
-                            <option value="">All Constituencies</option>
-                            {constituencies.map(constituency => (
-                                <option key={constituency.id} value={constituency.id}>{constituency.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <label>Records Found</label>
-                        <div className="record-count">{filteredVoters.length} voters</div>
-                    </div>
+                    <select className="sa-select" style={{ width: 160, height: 36 }} value={county} onChange={e => { setCounty(e.target.value); setPage(1); }}>
+                        <option value="">All Counties</option>
+                        {counties.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <select className="sa-select" style={{ width: 180, height: 36 }} value={constId} disabled={!county} onChange={e => { setConstId(e.target.value); setPage(1); }}>
+                        <option value="">{county ? 'All Constituencies' : 'Select county first'}</option>
+                        {consts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <select className="sa-select" style={{ width: 140, height: 36 }} value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
+                        <option value="">All status</option>
+                        <option value="voted">Voted</option>
+                        <option value="not_voted">Not voted</option>
+                        <option value="verified">Verified</option>
+                    </select>
+                    {(search || county || constId || status) && (
+                        <button className="sa-btn ghost" onClick={() => { setSearch(''); setCounty(''); setConstId(''); setStatus(''); setPage(1); }}>Clear</button>
+                    )}
                 </div>
 
-                {/* Voters Table */}
-                <div className="data-table-container">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>National ID</th>
-                                <th>Full Name</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>County</th>
-                                <th>Constituency</th>
-                                <th>Ward</th>
-                                <th>Voted</th>
-                                <th>Verified</th>
-                                <th>Registered</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredVoters.length === 0 ? (
+                {/* Table */}
+                <div className="sa-card">
+                    <div className="sa-card-header" style={{ padding: '10px 16px' }}>
+                        <span style={{ fontSize: 12, color: '#6B7280' }}>{filtered.length.toLocaleString()} voters matching filters</span>
+                        {totalPages > 1 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <button className="sa-btn outline" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}>←</button>
+                                <span style={{ fontSize: 12, color: '#6B7280' }}>{page}/{totalPages}</span>
+                                <button className="sa-btn outline" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page === totalPages}>→</button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="sa-table-wrap">
+                        <table className="sa-table">
+                            <thead>
                                 <tr>
-                                    <td colSpan="10" style={{ textAlign: 'center' }}>No voters found</td>
+                                    <th>Voter</th>
+                                    <th>National ID</th>
+                                    <th>Phone</th>
+                                    <th>County</th>
+                                    <th>Constituency</th>
+                                    <th>Ward</th>
+                                    <th>Voted</th>
+                                    <th>Verification</th>
                                 </tr>
-                            ) : (
-                                filteredVoters.map((voter) => (
-                                    <tr key={voter.id}>
-                                        <td>{voter.national_id}</td>
-                                        <td><strong>{voter.first_name} {voter.last_name}</strong></td>
-                                        <td>{voter.email || '-'}</td>
-                                        <td>{voter.phone || '-'}</td>
-                                        <td>{voter.county_name || '-'}</td>
-                                        <td>{voter.constituency_name || '-'}</td>
-                                        <td>{voter.ward_name || '-'}</td>
+                            </thead>
+                            <tbody>
+                                {paged.map(v => (
+                                    <tr key={v.id || v.national_id}>
                                         <td>
-                                            <span className={`status-badge ${voter.has_voted ? 'voted' : 'not-voted'}`}>
-                                                {voter.has_voted ? '✓ Voted' : 'Pending'}
-                                            </span>
+                                            <div style={{ fontWeight: 600, color: '#111827', fontSize: 13 }}>
+                                                {v.full_name || `${v.first_name||''} ${v.last_name||''}`.trim() || '—'}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#6B7280' }}>{v.email || '—'}</div>
                                         </td>
+                                        <td><span className="sa-monospace">{v.national_id || '—'}</span></td>
+                                        <td style={{ color: '#6B7280', fontSize: 12 }}>{v.phone || '—'}</td>
+                                        <td style={{ fontSize: 12 }}>{v.county_name || '—'}</td>
+                                        <td style={{ fontSize: 12 }}>{v.constituency_name || '—'}</td>
+                                        <td style={{ fontSize: 12 }}>{v.ward_name || '—'}</td>
                                         <td>
-                                            <span className={`status-badge ${voter.is_verified ? 'verified' : 'pending'}`}>
-                                                {voter.is_verified ? 'Verified' : 'Pending'}
-                                            </span>
+                                            {v.has_voted
+                                                ? <span className="pill-active">Voted</span>
+                                                : <span className="pill-pending">Pending</span>}
                                         </td>
-                                        <td>{new Date(voter.registered_at).toLocaleDateString()}</td>
+                                        <td><VerBadge level={v.verification_level || 0} /></td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ))}
+                                {paged.length === 0 && (
+                                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: '#9CA3AF' }}>No voters match these filters</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </SuperAdminLayout>

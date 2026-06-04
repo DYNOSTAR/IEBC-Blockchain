@@ -1,134 +1,131 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/voter-login.css';
+import '../styles/auth.css';
+
+/* ── Inline SVG icons ───────────────────────────────────────── */
+const Ico = ({ d, size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none"
+        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+        aria-hidden="true">
+        <path d={d} />
+    </svg>
+);
+const EYE     = 'M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5zm7-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z';
+const EYE_OFF = 'M2 2l12 12M6.7 6.7A3 3 0 0 0 10.9 10.9M4 4.1A8 8 0 0 0 1 8s3 5 7 5a7 7 0 0 0 3.5-1M9.5 3.5A7 7 0 0 1 15 8s-.7 1.4-2 2.6';
+const SHIELD  = 'M8 1L3 4v4c0 3.5 2.5 6 5 7 2.5-1 5-3.5 5-7V4L8 1z';
+const LOCK    = 'M5 8V6a3 3 0 0 1 6 0v2M3 8h10v7H3V8zm5 2v3';
+const ALERT   = 'M8 3l5.9 10.5H2.1L8 3zm0 4v3m0 2h.01';
+const LOGIN   = 'M10 3h3v10h-3M7 11l3-3-3-3M1 8h9';
+
+const API = 'http://localhost:5000/api';
 
 const VoterLogin = () => {
     const navigate = useNavigate();
-    const [showPassword, setShowPassword] = useState(false);
-    const [formData, setFormData] = useState({
-        nationalId: '',
-        password: ''
-    });
+    const [showPw,  setShowPw]  = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error,   setError]   = useState('');
+    const [form,    setForm]    = useState({ nationalId: '', password: '' });
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-        setError('');
-    };
+    const set = (k) => (e) => { setForm(p => ({ ...p, [k]: e.target.value })); setError(''); };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError('');
-
-        if (!formData.nationalId || !formData.password) {
-            setError('Please enter both National ID and Password');
-            setLoading(false);
-            return;
-        }
-
+        if (!form.nationalId.trim() || !form.password) { setError('Please fill in all fields.'); return; }
+        setLoading(true); setError('');
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/voter/login', {
-                nationalId: formData.nationalId.trim(),
-                password: formData.password
+            const r = await axios.post(`${API}/auth/voter/login`, {
+                nationalId: form.nationalId.trim(),
+                password:   form.password,
             });
-
-            if (response.data.success) {
-                const { token, voter } = response.data;
-
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(voter));
-                localStorage.setItem('role', 'voter');
-
-                // Redirect to voter portal
+            if (r.data.success && r.data.token) {
+                localStorage.setItem('token', r.data.token);
+                localStorage.setItem('user',  JSON.stringify(r.data.user || {}));
+                localStorage.setItem('role',  'voter');
                 navigate('/portal');
+            } else {
+                setError('Invalid credentials. Please try again.');
             }
-        } catch (err) {
-            console.error('Login error:', err);
-            setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+        } catch {
+            setError('Invalid credentials. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="voter-login-page">
-            <div className="login-container">
-                <div className="login-card">
-                    <div className="login-header">
-                        <div className="login-icon">🗳️</div>
-                        <h1>Voter Login</h1>
-                        <p>Access your voting dashboard</p>
+        <div className="auth-screen">
+            <div className="auth-card">
+                {/* Head */}
+                <div className="auth-card-head">
+                    <div className="auth-emblem">
+                        <Ico d={SHIELD} size={24} />
                     </div>
-                    
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label>National ID Number</label>
+                    <div className="auth-flag-stripe" />
+                    <h1 className="auth-title">Voter portal</h1>
+                    <p className="auth-subtitle">IEBC Kenya · Kenya General Election</p>
+                </div>
+
+                {/* Body */}
+                <div className="auth-card-body">
+                    {error && (
+                        <div className="auth-error-banner" role="alert">
+                            <Ico d={ALERT} size={14} />
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} noValidate>
+                        <div className="auth-field">
+                            <label className="auth-label" htmlFor="vl-id">National ID number</label>
                             <input
-                                type="text"
-                                name="nationalId"
-                                value={formData.nationalId}
-                                onChange={handleChange}
-                                placeholder="e.g., 12345678"
-                                autoComplete="off"
+                                id="vl-id"
+                                className={`auth-input${error ? ' error-field' : ''}`}
+                                type="text" inputMode="numeric"
+                                placeholder="Enter your national ID"
+                                value={form.nationalId}
+                                onChange={set('nationalId')}
+                                autoComplete="username"
+                                autoFocus
                                 required
                             />
                         </div>
-                        
-                        <div className="form-group">
-                            <label>Password</label>
-                            <div className="password-input-wrapper">
+
+                        <div className="auth-field">
+                            <label className="auth-label" htmlFor="vl-pw">Password</label>
+                            <div className="auth-input-wrap">
                                 <input
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
+                                    id="vl-pw"
+                                    className={`auth-input has-toggle${error ? ' error-field' : ''}`}
+                                    type={showPw ? 'text' : 'password'}
                                     placeholder="Enter your password"
+                                    value={form.password}
+                                    onChange={set('password')}
                                     autoComplete="current-password"
                                     required
                                 />
-                                <button 
-                                    type="button"
-                                    className="toggle-password-btn"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                    {showPassword ? '🙈' : '👁️'}
+                                <button type="button" className="auth-pw-toggle"
+                                    onClick={() => setShowPw(s => !s)}
+                                    aria-label={showPw ? 'Hide password' : 'Show password'}>
+                                    <Ico d={showPw ? EYE_OFF : EYE} size={15} />
                                 </button>
                             </div>
                         </div>
-                        
-                        {error && (
-                            <div className="error-message">
-                                <span>⚠️</span> {error}
-                            </div>
-                        )}
-                        
-                        <button type="submit" className="login-btn" disabled={loading}>
-                            {loading ? 'Logging in...' : 'Login to Vote'}
-                        </button>
-                        
-                        <div className="divider">
-                            <span>or</span>
-                        </div>
-                        
-                        <button 
-                            type="button" 
-                            onClick={() => navigate('/register')} 
-                            className="register-btn"
-                        >
-                            Create New Account
+
+                        <button className="auth-btn" type="submit" disabled={loading}>
+                            {loading
+                                ? <><span className="auth-spinner" /> Signing in…</>
+                                : <><Ico d={LOGIN} size={15} /> Access portal</>}
                         </button>
                     </form>
-                    
-                    <div className="login-footer">
-                        <p>Need help? Contact IEBC helpline: 0700-111-111</p>
-                        <p className="demo-note">Demo: National ID: 12345678 | Password: Voter@2027!</p>
-                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="auth-footer">
+                    <span className="auth-footer-text">
+                        <Ico d={LOCK} size={12} /> Don't have an account?
+                    </span>
+                    <button className="auth-link" onClick={() => navigate('/register')}>Register to vote</button>
                 </div>
             </div>
         </div>

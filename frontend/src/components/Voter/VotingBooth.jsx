@@ -15,6 +15,8 @@ const VotingBooth = ({ voter }) => {
     const [votedPositions, setVotedPositions]     = useState({});
     const [error, setError]                       = useState('');
     const [electionId, setElectionId]             = useState(null);
+    const [electionLocked, setElectionLocked]     = useState(false);
+    const [electionName, setElectionName]         = useState('');
 
     const loadAll = useCallback(async () => {
         setLoading(true);
@@ -28,6 +30,12 @@ const VotingBooth = ({ voter }) => {
             }
             const election = electionRes.data.election;
             setElectionId(election.id);
+            setElectionName(election.name || '');
+            if (election.is_locked) {
+                setElectionLocked(true);
+                setLoading(false);
+                return;
+            }
 
             const [positionsRes, myVotesRes] = await Promise.all([
                 electionAPI.getPositions(election.id, {
@@ -169,6 +177,27 @@ const VotingBooth = ({ voter }) => {
     const totalVoted      = positions.filter(p => votedPositions[p.dbId]).length;
     const progressPct     = positions.length > 0 ? (totalVoted / positions.length) * 100 : 0;
     const alreadyVotedHere = currentPosition && !!votedPositions[currentPosition.dbId];
+
+    // ── Locked ───────────────────────────────────────────────
+    if (electionLocked) {
+        return (
+            <div className="voting-error" style={{ maxWidth: 480, margin: '60px auto', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔒</div>
+                <h2 style={{ color: '#CE1126', marginBottom: 8 }}>Voting Temporarily Locked</h2>
+                {electionName && (
+                    <p style={{ fontWeight: 600, color: '#333', marginBottom: 8 }}>{electionName}</p>
+                )}
+                <p style={{ color: '#666', marginBottom: 24, lineHeight: 1.6 }}>
+                    The election administrator has temporarily suspended voting.
+                    Please check back shortly or contact your polling officer.
+                </p>
+                <button onClick={loadAll} className="retry-btn">Check Again</button>
+                <button onClick={() => navigate('/portal/profile')} className="back-btn" style={{ marginLeft: 12 }}>
+                    Back to Profile
+                </button>
+            </div>
+        );
+    }
 
     // ── Loading ───────────────────────────────────────────────
     if (loading) {

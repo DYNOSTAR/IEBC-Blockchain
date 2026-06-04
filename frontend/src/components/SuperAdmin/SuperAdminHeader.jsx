@@ -1,45 +1,50 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import iebcLogo from '../../assets/logo.png';
-import governmentLogo from '../../assets/government-logo.png';
+import govLogo  from '../../assets/government-logo.png';
 
 const SuperAdminHeader = ({ admin, onLogout, onToggleSidebar, sidebarCollapsed }) => {
     const navigate = useNavigate();
 
+    const initials = admin
+        ? `${admin.first_name?.[0] ?? ''}${admin.last_name?.[0] ?? ''}`.toUpperCase() || 'SA'
+        : 'SA';
+
+    const fullName = admin
+        ? (admin.name || `${admin.first_name ?? ''} ${admin.last_name ?? ''}`.trim()) || 'Super Admin'
+        : 'Super Admin';
+
     return (
-        <header className="super-admin-header">
-            <div className="header-left">
-                <button className="toggle-sidebar-btn" onClick={onToggleSidebar}>
-                    {sidebarCollapsed ? '☰' : '◀'}
+        <header className="sa-header">
+            <div className="sa-header-left">
+                <button className="sa-toggle-btn" onClick={onToggleSidebar} title="Toggle sidebar">
+                    {sidebarCollapsed ? '☰' : '←'}
                 </button>
-                <div className="header-logos">
-                    <div className="logo-item" onClick={() => navigate('/super-admin/dashboard')}>
-                        <img src={iebcLogo} alt="IEBC Logo" className="header-logo-img" />
-                        <span className="logo-label">IEBC</span>
-                    </div>
-                    <div className="logo-divider"></div>
-                    <div className="logo-item">
-                        <img src={governmentLogo} alt="Government of Kenya" className="header-logo-img" />
-                        <span className="logo-label">Government of Kenya</span>
-                    </div>
+
+                <div className="sa-header-brand" onClick={() => navigate('/super-admin/dashboard')}>
+                    <img src={iebcLogo} alt="IEBC"              className="sa-header-logo" />
+                    <img src={govLogo}  alt="Government of Kenya" className="sa-header-gov-logo" />
                 </div>
-                <div className="header-title">
-                    <h1>Super Admin Control Panel</h1>
-                    <p>Full System Administration</p>
+
+                <div className="sa-header-sep" />
+
+                <div className="sa-header-title">
+                    <h1>Super Admin Portal</h1>
+                    <p>IEBC Kenya · Full Access</p>
                 </div>
             </div>
-            
-            <div className="header-right">
-                <div className="admin-info">
-                    
-                    <div className="admin-details">
-                        <span className="admin-name">{admin?.name || admin?.first_name + ' ' + admin?.last_name}</span>
-                        <span className="admin-role">Super Administrator</span>
-                        <span className="admin-id">ID: {admin?.nationalId}</span>
+
+            <div className="sa-header-right">
+                <div className="sa-user-pill">
+                    <div className="sa-user-avatar">{initials}</div>
+                    <div>
+                        <div className="sa-user-name">{fullName}</div>
+                        <div className="sa-user-role">Super Admin</div>
                     </div>
                 </div>
-                <button className="logout-btn" onClick={onLogout}>
-                    <span>🚪</span> Logout
+
+                <button className="sa-logout-btn" onClick={onLogout}>
+                    ⏻ Logout
                 </button>
             </div>
         </header>

@@ -39,6 +39,8 @@ import SuperAdminWards from './components/SuperAdmin/pages/SuperAdminWards';
 import SuperAdminCandidates from './components/SuperAdmin/pages/SuperAdminCandidates';
 import SuperAdminVoters from './components/SuperAdmin/pages/SuperAdminVoters';
 import SuperAdminResults from './components/SuperAdmin/pages/SuperAdminResults';
+import SuperAdminAuditLogs from './components/SuperAdmin/pages/SuperAdminAuditLogs';
+import SuperAdminElectionManagement from './components/SuperAdmin/pages/SuperAdminElectionManagement';
 import './styles/main.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -136,13 +138,9 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
-                <Route 
-                    path="/admin/polling-stations" 
-                    element={
-                        <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                            <PollingStationsManagement />
-                        </ProtectedRoute>
-                    } 
+                <Route
+                    path="/admin/polling-stations"
+                    element={<Navigate to="/admin/dashboard" replace />}
                 />
                 <Route 
                     path="/admin/parties" 
@@ -160,13 +158,9 @@ function App() {
                         </ProtectedRoute>
                     } 
                 />
-                <Route 
-                    path="/admin/elections" 
-                    element={
-                        <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                            <ElectionsManagement />
-                        </ProtectedRoute>
-                    } 
+                <Route
+                    path="/admin/elections"
+                    element={<Navigate to="/admin/reports" replace />}
                 />
                 <Route 
                     path="/admin/voters" 
@@ -269,6 +263,16 @@ function App() {
                 <Route path="/super-admin/results" element={
                     <ProtectedRoute allowedRoles={['super_admin']}>
                         <SuperAdminResults />
+                    </ProtectedRoute>
+                } />
+                <Route path="/super-admin/audit-logs" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminAuditLogs />
+                    </ProtectedRoute>
+                } />
+                <Route path="/super-admin/election-management" element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdminElectionManagement />
                     </ProtectedRoute>
                 } />
                 <Route 

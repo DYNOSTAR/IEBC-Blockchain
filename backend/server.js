@@ -21,6 +21,10 @@ app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', creden
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ── Safe migrations ───────────────────────────────────────────
+pool.query(`ALTER TABLE elections ADD COLUMN IF NOT EXISTS is_locked   BOOLEAN   DEFAULT FALSE`).catch(() => {});
+pool.query(`ALTER TABLE elections ADD COLUMN IF NOT EXISTS updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP`).catch(() => {});
+
 // ── Core routes ───────────────────────────────────────────────
 app.use('/api/auth',        authRoutes);
 app.use('/api/elections',   electionRoutes);
@@ -84,8 +88,9 @@ app.get('/api/live-results', async (req, res) => {
         const totalRow = await pool.query(`SELECT COUNT(*) AS n FROM votes WHERE election_id = $1`, [electionId]);
 
         res.json({
-            success: true,
-            election: electionRow.rows[0],
+            success:   true,
+            election:  electionRow.rows[0],
+            isLocked:  electionRow.rows[0].is_locked || false,
             positions: Object.entries(positions)
                 .sort((a, b) => a[1].order - b[1].order)
                 .map(([name, v]) => ({ name, level: v.level, candidates: v.candidates })),

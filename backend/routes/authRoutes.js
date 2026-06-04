@@ -166,20 +166,27 @@ router.post('/voter/login', async (req, res) => {
     }
 });
 
-// ============ ADMIN LOGIN (Regular Admin) ============
+// ============ ADMIN LOGIN ============
 router.post('/admin/login', async (req, res) => {
-    const { nationalId, password } = req.body;
-    
-    console.log('Admin login attempt for ID:', nationalId);
-    
+    // Accept either email or nationalId (super admin uses email, admin may use nationalId)
+    const { email, nationalId, password } = req.body;
+    const identifier = email || nationalId;
+
+    if (!identifier || !password) {
+        return res.status(400).json({ success: false, error: 'Email/National ID and password are required.' });
+    }
+
     try {
+        // Try email first, then national_id
         const query = `
-            SELECT * FROM users 
-            WHERE national_id = $1 AND role IN ('admin', 'iebc_official')
+            SELECT * FROM users
+            WHERE (email = $1 OR national_id = $1)
+              AND role IN ('admin', 'super_admin', 'iebc_official')
+              AND is_active = true
         `;
-        
-        const result = await pool.query(query, [nationalId]);
-        
+
+        const result = await pool.query(query, [identifier]);
+
         if (result.rows.length === 0) {
             return res.status(401).json({ 
                 success: false, 
@@ -238,7 +245,6 @@ router.post('/admin/login', async (req, res) => {
 router.post('/super-admin/login', async (req, res) => {
     const { nationalId, password } = req.body;
     
-    console.log('Super Admin login attempt for ID:', nationalId);
     
     try {
         const query = `

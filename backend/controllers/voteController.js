@@ -17,7 +17,7 @@ const castVote = async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Verify election is active
+        // 1. Verify election is active and not locked
         const electionResult = await client.query(
             `SELECT * FROM elections
              WHERE id = $1 AND status = 'active'
@@ -27,6 +27,14 @@ const castVote = async (req, res) => {
         if (electionResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ success: false, error: 'Election is not active or has ended.' });
+        }
+        if (electionResult.rows[0].is_locked) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({
+                success: false,
+                error: 'Voting is temporarily locked. Please check back later.',
+                locked: true
+            });
         }
 
         // 2. Get voter record + national_id for blockchain hashing
@@ -181,7 +189,7 @@ const getElectionResults = async (req, res) => {
     const wardId         = req.query.wardId         ? parseInt(req.query.wardId)         : null;
 
     try {
-        // 1. Get votes from DB — scoped to the requested location
+        // 1. Get votes from DB — includes location names for hierarchical grouping
         const dbResult = await pool.query(
             `SELECT
                 p.id                       AS position_id,
@@ -192,6 +200,12 @@ const getElectionResults = async (req, res) => {
                 c.blockchain_candidate_id  AS blockchain_candidate_id,
                 c.name                     AS candidate_name,
                 c.symbol                   AS party,
+                c.county_id,
+                c.constituency_id,
+                c.ward_id,
+                co.name                    AS county_name,
+                con.name                   AS constituency_name,
+                w.name                     AS ward_name,
                 COUNT(v.id)                AS db_votes
              FROM positions p
              JOIN candidates c
@@ -201,18 +215,23 @@ const getElectionResults = async (req, res) => {
                 AND (
                     p.level = 'national'
                     OR (p.level = 'county'
-                        AND ($2::int IS NULL OR c.county_id IS NULL OR c.county_id = $2::int))
+                        AND ($2::int IS NULL OR c.county_id = $2::int))
                     OR (p.level = 'constituency'
-                        AND ($3::int IS NULL OR c.constituency_id IS NULL OR c.constituency_id = $3::int))
+                        AND ($3::int IS NULL OR c.constituency_id = $3::int))
                     OR (p.level = 'ward'
-                        AND ($4::int IS NULL OR c.ward_id IS NULL OR c.ward_id = $4::int))
+                        AND ($4::int IS NULL OR c.ward_id = $4::int))
                 )
+             LEFT JOIN counties      co  ON co.id  = c.county_id
+             LEFT JOIN constituencies con ON con.id = c.constituency_id
+             LEFT JOIN wards          w   ON w.id   = c.ward_id
              LEFT JOIN votes v
                 ON v.candidate_id = c.id AND v.election_id = $1
              WHERE p.election_id = $1
              GROUP BY p.id, p.name, p.display_order, p.level,
-                      c.id, c.blockchain_candidate_id, c.name, c.symbol
-             ORDER BY p.display_order ASC, db_votes DESC`,
+                      c.id, c.blockchain_candidate_id, c.name, c.symbol,
+                      c.county_id, c.constituency_id, c.ward_id,
+                      co.name, con.name, w.name
+             ORDER BY p.display_order ASC, co.name, con.name, w.name, db_votes DESC`,
             [electionId, countyId, constituencyId, wardId]
         );
 
@@ -247,16 +266,21 @@ const getElectionResults = async (req, res) => {
                     totalVotes:   0
                 };
             }
-            const dbVotes = parseInt(row.db_votes);
+            const dbVotes    = parseInt(row.db_votes);
             const chainVotes = blockchainCounts[row.candidate_id];
             positionsMap[row.position_id].candidates.push({
-                id:              row.candidate_id,
-                name:            row.candidate_name,
-                party:           row.party,
+                id:                row.candidate_id,
+                name:              row.candidate_name,
+                party:             row.party,
+                county_id:         row.county_id,
+                constituency_id:   row.constituency_id,
+                ward_id:           row.ward_id,
+                countyName:        row.county_name       || null,
+                constituencyName:  row.constituency_name || null,
+                wardName:          row.ward_name         || null,
                 dbVotes,
                 chainVotes,
-                // integrity: does DB match blockchain?
-                verified:        chainVotes === null ? null : (dbVotes === chainVotes)
+                verified:          chainVotes === null ? null : (dbVotes === chainVotes)
             });
             positionsMap[row.position_id].totalVotes += dbVotes;
         }
@@ -286,12 +310,21 @@ const getElectionResults = async (req, res) => {
         const totalVotesCast = parseInt(turnoutResult.rows[0].voted);
         const totalRegistered = parseInt(registeredResult.rows[0].total);
 
-        // 6. Blockchain health
+        // 6. Election lock/status info
+        const electionMeta = await pool.query(
+            `SELECT status, is_locked, name FROM elections WHERE id = $1`, [electionId]
+        );
+        const meta = electionMeta.rows[0] || {};
+
+        // 7. Blockchain health
         const blockchainStatus = await checkBlockchainConnection();
 
         res.json({
             success: true,
-            electionId: parseInt(electionId),
+            electionId:     parseInt(electionId),
+            electionName:   meta.name || null,
+            electionStatus: meta.status || null,
+            isLocked:       meta.is_locked || false,
             positions,
             turnout: {
                 voted:      totalVotesCast,
@@ -301,8 +334,8 @@ const getElectionResults = async (req, res) => {
                     : 0
             },
             blockchain: {
-                connected:      blockchainStatus.connected,
-                electionActive: blockchainStatus.electionActive,
+                connected:       blockchainStatus.connected,
+                electionActive:  blockchainStatus.electionActive,
                 contractAddress: blockchainStatus.contractAddress
             },
             generatedAt: new Date().toISOString()

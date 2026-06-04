@@ -68,6 +68,7 @@ CREATE TABLE elections (
     end_date    TIMESTAMP NOT NULL,
     status      VARCHAR(50) DEFAULT 'pending'
         CHECK (status IN ('pending', 'active', 'closed', 'results_published')),
+    is_locked   BOOLEAN DEFAULT FALSE,
     created_by  INTEGER REFERENCES users(id),
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -203,12 +204,12 @@ INSERT INTO wards (name, constituency_id, code) VALUES
 
 -- ── Election ───────────────────────────────────────────────────
 -- created_by=1 (admin)
-INSERT INTO elections (name, description, start_date, end_date, status, created_by) VALUES
+INSERT INTO elections (name, description, start_date, end_date, status, is_locked, created_by) VALUES
 ('Kenya General Election 2027',
  'General election for President, Governors, Senators, MPs, Women Representatives and MCAs',
  NOW() - INTERVAL '1 hour',
  NOW() + INTERVAL '12 hours',
- 'active', 1);
+ 'active', FALSE, 1);
 -- Assigned ID: 1
 
 -- ── Positions (election_id=1) ──────────────────────────────────

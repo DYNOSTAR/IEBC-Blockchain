@@ -1,522 +1,235 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import AdminLayout from '../AdminLayout';
-import '../../../styles/admin-management.css';
+import Icon from '../../shared/Icon';
+
+const API  = 'http://localhost:5000/api';
+const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+
+const LEVEL_COLOR = { national: '#1D4ED8', county: '#BB0000', constituency: '#00763C', ward: '#7C3AED' };
+
+const CandidateCard = ({ c, onDelete }) => {
+    const initial = (c.name || '?')[0].toUpperCase();
+    const color   = c.party_color || LEVEL_COLOR[c.position_level] || '#9CA3AF';
+    const loc     = c.ward_name || c.constituency_name || c.county_name || 'National';
+    return (
+        <div className="adm-item-card" style={{ borderTop: `3px solid ${color}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 500, flexShrink: 0 }}>{initial}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 1 }}>{c.position_name || '—'}</div>
+                </div>
+            </div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: `${color}18`, color, fontWeight: 500 }}>{c.party || c.symbol || '—'}</span>
+                <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#F3F4F6', color: 'var(--t3)' }}>{loc}</span>
+            </div>
+            <button className="adm-btn danger" style={{ width: '100%', justifyContent: 'center', fontSize: 12, padding: '5px' }} onClick={() => onDelete(c)}>
+                <Icon name="trash" size={12} /> Remove
+            </button>
+        </div>
+    );
+};
 
 const CandidatesManagement = () => {
     const [candidates, setCandidates] = useState([]);
-    const [parties, setParties] = useState([]);
-    const [elections, setElections] = useState([]);
-    const [positions, setPositions] = useState([]);
-    const [counties, setCounties] = useState([]);
-    const [constituencies, setConstituencies] = useState([]);
-    const [wards, setWards] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [editingCandidate, setEditingCandidate] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filteredCandidates, setFilteredCandidates] = useState([]);
-    
-    const [formData, setFormData] = useState({
-        election_id: '',
-        position_id: '',
-        political_party_id: '',
-        name: '',
-        symbol: '',
-        description: '',
-        county_id: '',
-        constituency_id: '',
-        ward_id: '',
-        is_independent: false
-    });
+    const [positions,  setPositions]  = useState([]);
+    const [parties,    setParties]    = useState([]);
+    const [elections,  setElections]  = useState([]);
+    const [counties,   setCounties]   = useState([]);
+    const [loading,    setLoading]    = useState(true);
+    const [view,       setView]       = useState('table');
+    const [search,     setSearch]     = useState('');
+    const [posFilter,  setPosFilter]  = useState('');
+    const [partyFilter,setPartyFilter]= useState('');
+    const [flash,      setFlash]      = useState({ text: '', type: '' });
+    const [modal,      setModal]      = useState(false);
+    const [sub,        setSub]        = useState(false);
+    const [form,       setForm]       = useState({ election_id:'', position_id:'', political_party_id:'', name:'', symbol:'', description:'', county_id:'', constituency_id:'', ward_id:'' });
+
+    const msg = (text, type='ok') => { setFlash({text,type}); setTimeout(()=>setFlash({text:'',type:''}),4000); };
 
     useEffect(() => {
-        loadCandidates();
-        loadParties();
-        loadElections();
-        loadPositions();
-        loadCounties();
+        Promise.all([
+            axios.get(`${API}/admin/candidates`, auth()),
+            axios.get(`${API}/admin/positions`, auth()),
+            axios.get(`${API}/admin/parties`, auth()),
+            axios.get(`${API}/elections`, auth()),
+            axios.get(`${API}/counties`, auth()),
+        ]).then(([c,p,pt,e,co]) => {
+            setCandidates(c.data.candidates || []);
+            setPositions(p.data.positions   || []);
+            setParties(pt.data.parties      || []);
+            setElections(e.data.elections   || []);
+            setCounties(co.data.counties    || []);
+        }).finally(() => setLoading(false));
     }, []);
 
-    useEffect(() => {
-        const filtered = candidates.filter(candidate => 
-            candidate.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            candidate.party_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            candidate.position_name?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setFilteredCandidates(filtered);
-    }, [searchTerm, candidates]);
+    const handleDelete = async (c) => {
+        if (!window.confirm(`Remove ${c.name}?`)) return;
+        try { await axios.delete(`${API}/admin/candidates/${c.id}`, auth()); msg('Candidate removed'); setCandidates(cs => cs.filter(x => x.id !== c.id)); }
+        catch (e) { msg(e.response?.data?.error || 'Failed', 'err'); }
+    };
 
-    const loadCandidates = async () => {
+    const handleCreate = async (e) => {
+        e.preventDefault(); setSub(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/admin/candidates', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setCandidates(response.data.candidates);
-                setFilteredCandidates(response.data.candidates);
-            }
-        } catch (error) {
-            console.error('Error loading candidates:', error);
-        } finally {
-            setLoading(false);
-        }
+            const r = await axios.post(`${API}/admin/candidates`, form, auth());
+            if (r.data.success) { msg('Candidate added'); setCandidates(cs => [r.data.candidate, ...cs]); setModal(false); }
+            else msg(r.data.error || 'Failed', 'err');
+        } catch (e) { msg(e.response?.data?.error || 'Failed', 'err'); }
+        finally { setSub(false); }
     };
 
-    const loadParties = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/admin/parties', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setParties(response.data.parties);
-            }
-        } catch (error) {
-            console.error('Error loading parties:', error);
-        }
-    };
-
-    const loadElections = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/admin/elections', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setElections(response.data.elections);
-            }
-        } catch (error) {
-            console.error('Error loading elections:', error);
-        }
-    };
-
-    const loadPositions = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/admin/positions', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setPositions(response.data.positions);
-            }
-        } catch (error) {
-            console.error('Error loading positions:', error);
-        }
-    };
-
-    const loadCounties = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/admin/counties', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setCounties(response.data.counties);
-            }
-        } catch (error) {
-            console.error('Error loading counties:', error);
-        }
-    };
-
-    const loadConstituencies = async (countyId) => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:5000/api/admin/constituencies/county/${countyId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setConstituencies(response.data.constituencies);
-            }
-        } catch (error) {
-            console.error('Error loading constituencies:', error);
-        }
-    };
-
-    const loadWards = async (constituencyId) => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:5000/api/admin/wards/constituency/${constituencyId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data.success) {
-                setWards(response.data.wards);
-            }
-        } catch (error) {
-            console.error('Error loading wards:', error);
-        }
-    };
-
-    const handlePositionChange = async (e) => {
-        const positionId = e.target.value;
-        setFormData({ ...formData, position_id: positionId });
-        
-        // Reset location fields when position changes
-        setFormData(prev => ({ ...prev, county_id: '', constituency_id: '', ward_id: '' }));
-        setConstituencies([]);
-        setWards([]);
-    };
-
-    const handleCountyChange = async (e) => {
-        const countyId = e.target.value;
-        setFormData({ ...formData, county_id: countyId, constituency_id: '', ward_id: '' });
-        if (countyId) {
-            await loadConstituencies(countyId);
-        } else {
-            setConstituencies([]);
-            setWards([]);
-        }
-    };
-
-    const handleConstituencyChange = async (e) => {
-        const constituencyId = e.target.value;
-        setFormData({ ...formData, constituency_id: constituencyId, ward_id: '' });
-        if (constituencyId) {
-            await loadWards(constituencyId);
-        } else {
-            setWards([]);
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const token = localStorage.getItem('token');
-            const url = editingCandidate 
-                ? `http://localhost:5000/api/admin/candidates/${editingCandidate.id}`
-                : 'http://localhost:5000/api/admin/candidates';
-            const method = editingCandidate ? 'put' : 'post';
-            
-            const response = await axios[method](url, formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            if (response.data.success) {
-                alert(editingCandidate ? 'Candidate updated successfully!' : 'Candidate added successfully!');
-                loadCandidates();
-                setShowModal(false);
-                setEditingCandidate(null);
-                setFormData({
-                    election_id: '',
-                    position_id: '',
-                    political_party_id: '',
-                    name: '',
-                    symbol: '',
-                    description: '',
-                    county_id: '',
-                    constituency_id: '',
-                    ward_id: '',
-                    is_independent: false
-                });
-            }
-        } catch (error) {
-            console.error('Error saving candidate:', error);
-            alert(error.response?.data?.error || 'Failed to save candidate');
-        }
-    };
-
-    const handleEdit = (candidate) => {
-        setEditingCandidate(candidate);
-        setFormData({
-            election_id: candidate.election_id,
-            position_id: candidate.position_id,
-            political_party_id: candidate.political_party_id,
-            name: candidate.name,
-            symbol: candidate.symbol || '',
-            description: candidate.description || '',
-            county_id: candidate.county_id || '',
-            constituency_id: candidate.constituency_id || '',
-            ward_id: candidate.ward_id || '',
-            is_independent: candidate.is_independent || false
+    const filtered = useMemo(() => {
+        const q = search.toLowerCase();
+        return candidates.filter(c => {
+            if (q && !`${c.name||''} ${c.party||''}`.toLowerCase().includes(q)) return false;
+            if (posFilter && String(c.position_id) !== posFilter) return false;
+            if (partyFilter && String(c.political_party_id) !== partyFilter) return false;
+            return true;
         });
-        
-        // Load dependent data if needed
-        if (candidate.county_id) {
-            loadConstituencies(candidate.county_id);
-            if (candidate.constituency_id) {
-                loadWards(candidate.constituency_id);
-            }
-        }
-        
-        setShowModal(true);
-    };
+    }, [candidates, search, posFilter, partyFilter]);
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this candidate?')) {
-            try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:5000/api/admin/candidates/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                alert('Candidate deleted successfully!');
-                loadCandidates();
-            } catch (error) {
-                console.error('Error deleting candidate:', error);
-                alert('Failed to delete candidate');
-            }
-        }
-    };
+    const loc = (c) => c.ward_name || c.constituency_name || c.county_name || 'National';
 
-    const getPositionLevel = (positionName) => {
-        if (positionName === 'President of Kenya') return 'national';
-        if (['County Governor', 'Senator', 'Women Representative'].includes(positionName)) return 'county';
-        if (positionName === 'Member of Parliament') return 'constituency';
-        if (positionName === 'Member of County Assembly') return 'ward';
-        return 'unknown';
-    };
-
-    const showLocationFields = (positionName) => {
-        const level = getPositionLevel(positionName);
-        return level === 'county' || level === 'constituency' || level === 'ward';
-    };
-
-    const getPosition = (positionId) => {
-        return positions.find(p => p.id === positionId);
-    };
-
-    if (loading) {
-        return (
-            <AdminLayout>
-                <div className="admin-loading">Loading candidates...</div>
-            </AdminLayout>
-        );
-    }
-
-    const currentPosition = getPosition(formData.position_id);
-    const positionLevel = currentPosition ? getPositionLevel(currentPosition.name) : 'unknown';
+    if (loading) return <AdminLayout><div className="adm-loading"><div className="adm-spinner" /></div></AdminLayout>;
 
     return (
         <AdminLayout>
-            <div className="management-page">
-                <div className="page-header">
+            <div className="adm-page">
+                <div className="adm-page-header">
                     <div>
-                        <h2>Candidates Management</h2>
-                        <p>Manage all election candidates</p>
+                        <h1 className="adm-page-title">Candidates</h1>
+                        <p className="adm-page-sub">{candidates.length} candidates across {positions.length} positions</p>
                     </div>
-                    <button className="add-btn" onClick={() => setShowModal(true)}>
-                        + Add New Candidate
+                    <button className="adm-btn primary" onClick={() => setModal(true)}>
+                        <Icon name="plus" size={14} /> Add candidate
                     </button>
                 </div>
 
-                <div className="search-bar">
-                    <input
-                        type="text"
-                        placeholder="Search by name, party, or position..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
+                {flash.text && <div className={`adm-flash ${flash.type}`}><Icon name={flash.type==='err'?'alert':'check'} size={14} />{flash.text}</div>}
+
+                <div className="adm-filter-row">
+                    <div className="adm-search-box" style={{ maxWidth: 300 }}>
+                        <Icon name="search" size={14} className="adm-search-icon" />
+                        <input placeholder="Search by name or party…" value={search} onChange={e => setSearch(e.target.value)} />
+                    </div>
+                    <select className="adm-select" style={{ width: 200, height: 36 }} value={posFilter} onChange={e => setPosFilter(e.target.value)}>
+                        <option value="">All positions</option>
+                        {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <select className="adm-select" style={{ width: 160, height: 36 }} value={partyFilter} onChange={e => setPartyFilter(e.target.value)}>
+                        <option value="">All parties</option>
+                        {parties.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
+                    </select>
+                    {(search||posFilter||partyFilter) && <button className="adm-btn ghost" onClick={()=>{setSearch('');setPosFilter('');setPartyFilter('');}}>Clear</button>}
+                    <div className="adm-view-toggle" style={{ marginLeft: 'auto' }}>
+                        <button className={`adm-view-btn ${view==='table'?'active':''}`} onClick={()=>setView('table')}><Icon name="results" size={13} /></button>
+                        <button className={`adm-view-btn ${view==='grid'?'active':''}`} onClick={()=>setView('grid')}><Icon name="dashboard" size={13} /></button>
+                    </div>
                 </div>
 
-                <div className="data-table-container">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Party</th>
-                                <th>Position</th>
-                                <th>Election</th>
-                                <th>Symbol</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredCandidates.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" style={{ textAlign: 'center' }}>No candidates found</td>
-                                </tr>
-                            ) : (
-                                filteredCandidates.map((candidate) => (
-                                    <tr key={candidate.id}>
-                                        <td><strong>{candidate.name}</strong></td>
-                                        <td>
-                                            <span style={{ color: candidate.party_color }}>
-                                                {candidate.party_name || (candidate.is_independent ? 'Independent' : '-')}
-                                            </span>
-                                        </td>
-                                        <td>{candidate.position_name}</td>
-                                        <td>{candidate.election_name}</td>
-                                        <td style={{ fontSize: '1.2rem' }}>{candidate.symbol || '🗳️'}</td>
-                                        <td>
-                                            {candidate.county_name && <span>{candidate.county_name}</span>}
-                                            {candidate.constituency_name && <span> / {candidate.constituency_name}</span>}
-                                            {candidate.ward_name && <span> / {candidate.ward_name}</span>}
-                                            {!candidate.county_name && !candidate.constituency_name && !candidate.ward_name && <span>National</span>}
-                                        </td>
-                                        <td>
-                                            <span className="status-badge active">Active</span>
-                                        </td>
-                                        <td>
-                                            <button className="edit-btn" onClick={() => handleEdit(candidate)}>✏️</button>
-                                            <button className="delete-btn" onClick={() => handleDelete(candidate.id)}>🗑️</button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {showModal && (
-                    <div className="modal-overlay">
-                        <div className="modal-content large">
-                            <div className="modal-header">
-                                <h3>{editingCandidate ? 'Edit Candidate' : 'Add New Candidate'}</h3>
-                                <button className="close-modal" onClick={() => {
-                                    setShowModal(false);
-                                    setEditingCandidate(null);
-                                }}>×</button>
+                {view === 'grid'
+                    ? <div className="adm-card-grid">{filtered.map(c => <CandidateCard key={c.id} c={c} onDelete={handleDelete} />)}</div>
+                    : (
+                        <div className="adm-card">
+                            <div className="adm-table-wrap">
+                                <table className="adm-table">
+                                    <thead><tr><th>Candidate</th><th>Party</th><th>Position</th><th>Level</th><th>Location</th><th>Status</th><th></th></tr></thead>
+                                    <tbody>
+                                        {filtered.length === 0 && <tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'var(--t4)'}}>No candidates found</td></tr>}
+                                        {filtered.map(c => (
+                                            <tr key={c.id}>
+                                                <td>
+                                                    <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                                                        <div className="adm-avatar" style={{ background: c.party_color || LEVEL_COLOR[c.position_level] || 'var(--g)' }}>{(c.name||'?')[0]}</div>
+                                                        <span style={{ fontWeight: 500, fontSize: 13 }}>{c.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ fontSize: 12 }}>{c.party || c.symbol || '—'}</td>
+                                                <td style={{ fontSize: 12 }}>{c.position_name || '—'}</td>
+                                                <td>
+                                                    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: `${LEVEL_COLOR[c.position_level]||'#9CA3AF'}18`, color: LEVEL_COLOR[c.position_level]||'#9CA3AF', fontWeight: 500 }}>
+                                                        {c.position_level || '—'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontSize: 12, color: 'var(--t3)' }}>{loc(c)}</td>
+                                                <td><span className={`adm-pill ${c.is_active!==false?'active':'closed'}`}>{c.is_active!==false?'Active':'Inactive'}</span></td>
+                                                <td>
+                                                    <div className="row-actions">
+                                                        <button className="adm-btn ghost icon" style={{ color:'var(--r)' }} onClick={() => handleDelete(c)}><Icon name="trash" size={13} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Election *</label>
-                                        <select
-                                            value={formData.election_id}
-                                            onChange={(e) => setFormData({...formData, election_id: e.target.value})}
-                                            required
-                                        >
-                                            <option value="">Select Election</option>
-                                            {elections.map(election => (
-                                                <option key={election.id} value={election.id}>{election.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Position *</label>
-                                        <select
-                                            value={formData.position_id}
-                                            onChange={handlePositionChange}
-                                            required
-                                        >
-                                            <option value="">Select Position</option>
-                                            {positions.map(position => (
-                                                <option key={position.id} value={position.id}>{position.title}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
+                        </div>
+                    )
+                }
 
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Candidate Name *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Political Party</label>
-                                        <select
-                                            value={formData.political_party_id}
-                                            onChange={(e) => setFormData({...formData, political_party_id: e.target.value})}
-                                            disabled={formData.is_independent}
-                                        >
-                                            <option value="">Select Party</option>
-                                            {parties.map(party => (
-                                                <option key={party.id} value={party.id}>{party.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Symbol</label>
-                                        <input
-                                            type="text"
-                                            value={formData.symbol}
-                                            onChange={(e) => setFormData({...formData, symbol: e.target.value})}
-                                            placeholder="e.g., 🟢"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="checkbox-label">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.is_independent}
-                                                onChange={(e) => setFormData({...formData, is_independent: e.target.checked})}
-                                            />
-                                            Independent Candidate
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {showLocationFields(currentPosition?.title) && (
-                                    <>
-                                        <div className="form-row">
-                                            <div className="form-group">
-                                                <label>County</label>
-                                                <select
-                                                    value={formData.county_id}
-                                                    onChange={handleCountyChange}
-                                                >
-                                                    <option value="">Select County</option>
-                                                    {counties.map(county => (
-                                                        <option key={county.id} value={county.id}>{county.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            
-                                            {positionLevel === 'constituency' || positionLevel === 'ward' ? (
-                                                <div className="form-group">
-                                                    <label>Constituency</label>
-                                                    <select
-                                                        value={formData.constituency_id}
-                                                        onChange={handleConstituencyChange}
-                                                        disabled={!formData.county_id}
-                                                    >
-                                                        <option value="">Select Constituency</option>
-                                                        {constituencies.map(con => (
-                                                            <option key={con.id} value={con.id}>{con.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            ) : null}
+                {modal && (
+                    <div className="adm-modal-overlay">
+                        <div className="adm-modal" style={{ maxWidth: 600 }}>
+                            <div className="adm-modal-head">
+                                <span className="adm-modal-title">Add candidate</span>
+                                <button className="adm-modal-close" onClick={() => setModal(false)}><Icon name="x" size={16} /></button>
+                            </div>
+                            <form onSubmit={handleCreate}>
+                                <div className="adm-modal-body">
+                                    <div className="adm-form-row">
+                                        <div className="adm-form-group">
+                                            <label className="adm-label">Election *</label>
+                                            <select className="adm-select" required value={form.election_id} onChange={e=>setForm(p=>({...p,election_id:e.target.value}))}>
+                                                <option value="">Select election</option>
+                                                {elections.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                            </select>
                                         </div>
-
-                                        {positionLevel === 'ward' && (
-                                            <div className="form-row">
-                                                <div className="form-group">
-                                                    <label>Ward</label>
-                                                    <select
-                                                        value={formData.ward_id}
-                                                        onChange={(e) => setFormData({...formData, ward_id: e.target.value})}
-                                                        disabled={!formData.constituency_id}
-                                                    >
-                                                        <option value="">Select Ward</option>
-                                                        {wards.map(ward => (
-                                                            <option key={ward.id} value={ward.id}>{ward.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-
-                                <div className="form-group">
-                                    <label>Description / Bio</label>
-                                    <textarea
-                                        rows="3"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    />
+                                        <div className="adm-form-group">
+                                            <label className="adm-label">Position *</label>
+                                            <select className="adm-select" required value={form.position_id} onChange={e=>setForm(p=>({...p,position_id:e.target.value}))}>
+                                                <option value="">Select position</option>
+                                                {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="adm-form-row">
+                                        <div className="adm-form-group">
+                                            <label className="adm-label">Full name *</label>
+                                            <input className="adm-input" required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
+                                        </div>
+                                        <div className="adm-form-group">
+                                            <label className="adm-label">Party</label>
+                                            <select className="adm-select" value={form.political_party_id} onChange={e=>setForm(p=>({...p,political_party_id:e.target.value}))}>
+                                                <option value="">Independent</option>
+                                                {parties.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="adm-form-row">
+                                        <div className="adm-form-group">
+                                            <label className="adm-label">County</label>
+                                            <select className="adm-select" value={form.county_id} onChange={e=>setForm(p=>({...p,county_id:e.target.value}))}>
+                                                <option value="">National</option>
+                                                {counties.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="adm-form-group">
+                                            <label className="adm-label">Party abbreviation</label>
+                                            <input className="adm-input" placeholder="e.g. UDA" value={form.symbol} onChange={e=>setForm(p=>({...p,symbol:e.target.value}))} />
+                                        </div>
+                                    </div>
+                                    <div className="adm-form-group" style={{ gridColumn: '1/-1' }}>
+                                        <label className="adm-label">Description</label>
+                                        <input className="adm-input" value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} />
+                                    </div>
                                 </div>
-
-                                <div className="modal-actions">
-                                    <button type="button" className="cancel-btn" onClick={() => {
-                                        setShowModal(false);
-                                        setEditingCandidate(null);
-                                    }}>Cancel</button>
-                                    <button type="submit" className="submit-btn">
-                                        {editingCandidate ? 'Update' : 'Add'} Candidate
-                                    </button>
+                                <div className="adm-modal-foot">
+                                    <button type="button" className="adm-btn secondary" onClick={() => setModal(false)}>Cancel</button>
+                                    <button type="submit" className="adm-btn primary" disabled={sub}>{sub ? 'Saving…' : 'Add candidate'}</button>
                                 </div>
                             </form>
                         </div>

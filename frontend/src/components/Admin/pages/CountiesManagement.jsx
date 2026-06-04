@@ -1,254 +1,251 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import AdminLayout from '../AdminLayout';
-import '../../../styles/admin-management.css';
+import Icon from '../../shared/Icon';
 
+const API  = 'http://localhost:5000/api';
+const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+const n    = (v) => Number(v || 0).toLocaleString();
+
+// ── Shared modal ───────────────────────────────────────────────
+const GeoModal = ({ title, fields, onClose, onSubmit, submitting, initial = {} }) => {
+    const [form, setForm] = useState(() => Object.fromEntries(fields.map(f => [f.key, initial[f.key] ?? f.default ?? ''])));
+    return (
+        <div className="adm-modal-overlay">
+            <div className="adm-modal">
+                <div className="adm-modal-head">
+                    <span className="adm-modal-title">{title}</span>
+                    <button className="adm-modal-close" onClick={onClose}><Icon name="x" size={16} /></button>
+                </div>
+                <form onSubmit={e => { e.preventDefault(); onSubmit(form); }}>
+                    <div className="adm-modal-body">
+                        <div className="adm-form-row">
+                            {fields.map(f => (
+                                <div key={f.key} className="adm-form-group" style={f.full ? { gridColumn: '1/-1' } : {}}>
+                                    <label className="adm-label">{f.label}{f.required ? ' *' : ''}</label>
+                                    <input className="adm-input" required={f.required} placeholder={f.placeholder}
+                                        type={f.type || 'text'} value={form[f.key]}
+                                        onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="adm-modal-foot">
+                        <button type="button" className="adm-btn secondary" onClick={onClose}>Cancel</button>
+                        <button type="submit" className="adm-btn primary" disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// ── Main component ─────────────────────────────────────────────
 const CountiesManagement = () => {
-    const [counties, setCounties] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [showModal, setShowModal] = useState(false);
-    const [editingCounty, setEditingCounty] = useState(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        code: '',
-        population: '',
-        registered_voters: '',
-        headquarters: ''
-    });
+    const [counties, setCounties]         = useState([]);
+    const [constituencies, setConst]      = useState([]);
+    const [wards, setWards]               = useState([]);
+    const [drill, setDrill]               = useState(null);      // { level:'county'|'constituency', id, name }
+    const [subDrill, setSubDrill]         = useState(null);
+    const [loading, setLoading]           = useState(true);
+    const [search, setSearch]             = useState('');
+    const [modal, setModal]               = useState(null);      // { mode:'add'|'edit', level, data? }
+    const [flash, setFlash]               = useState({ text: '', type: '' });
+    const [sub, setSub]                   = useState(false);
 
-    useEffect(() => {
-        loadCounties();
-    }, []);
+    const msg = (text, type = 'ok') => { setFlash({ text, type }); setTimeout(() => setFlash({ text: '', type: '' }), 4000); };
 
     const loadCounties = async () => {
+        setLoading(true);
+        try { const r = await axios.get(`${API}/admin/counties`, auth()); if (r.data.success) setCounties(r.data.counties || []); }
+        catch { msg('Failed to load counties', 'err'); }
+        finally { setLoading(false); }
+    };
+    const loadConst = async (countyId) => {
+        const r = await axios.get(`${API}/admin/constituencies`, auth());
+        if (r.data.success) setConst((r.data.constituencies || []).filter(c => !countyId || c.county_id === countyId || c.county_id === parseInt(countyId)));
+    };
+    const loadWards = async (constId) => {
+        const r = await axios.get(`${API}/admin/wards`, auth());
+        if (r.data.success) setWards((r.data.wards || []).filter(w => !constId || w.constituency_id === constId || w.constituency_id === parseInt(constId)));
+    };
+
+    useEffect(() => { loadCounties(); }, []); // eslint-disable-line
+
+    const handleCountyClick = async (county) => { setDrill({ level: 'county', id: county.id, name: county.name }); setSubDrill(null); setSearch(''); await loadConst(county.id); };
+    const handleConstClick  = async (c)      => { setSubDrill({ level: 'constituency', id: c.id, name: c.name }); await loadWards(c.id); };
+
+    const handleSave = async (form) => {
+        setSub(true);
+        const level = modal.level;
         try {
-            setLoading(true);
-            const token = localStorage.getItem('token');
-            
-            const response = await axios.get('http://localhost:5000/api/admin/counties', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            if (response.data.success) {
-                setCounties(response.data.counties);
-                setError('');
+            if (modal.mode === 'edit') {
+                if (level === 'county')       await axios.put(`${API}/admin/counties/${modal.data.id}`, form, auth());
+                if (level === 'constituency') await axios.put(`${API}/admin/constituencies/${modal.data.id}`, form, auth());
+                if (level === 'ward')         await axios.put(`${API}/admin/wards/${modal.data.id}`, form, auth());
+                msg(`${level} updated`);
             } else {
-                setError('Failed to load counties');
+                if (level === 'county')       await axios.post(`${API}/admin/counties`, form, auth());
+                if (level === 'constituency') await axios.post(`${API}/admin/constituencies`, { ...form, county_id: drill?.id }, auth());
+                if (level === 'ward')         await axios.post(`${API}/admin/wards`, { ...form, constituency_id: subDrill?.id || drill?.id }, auth());
+                msg(`${level} added`);
             }
-        } catch (error) {
-            console.error('Error loading counties:', error);
-            setError(error.response?.data?.error || 'Failed to load counties');
-        } finally {
-            setLoading(false);
-        }
+            setModal(null);
+            if (level === 'county')       loadCounties();
+            if (level === 'constituency') loadConst(drill?.id);
+            if (level === 'ward')         loadWards(subDrill?.id);
+        } catch (e) { msg(e.response?.data?.error || 'Failed', 'err'); }
+        finally { setSub(false); }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (!formData.name || !formData.code) {
-            setError('County name and code are required');
-            return;
-        }
-        
+    const handleDelete = async (level, id, name) => {
+        if (!window.confirm(`Delete ${name}?`)) return;
         try {
-            const token = localStorage.getItem('token');
-            const url = editingCounty 
-                ? `http://localhost:5000/api/admin/counties/${editingCounty.id}`
-                : 'http://localhost:5000/api/admin/counties';
-            const method = editingCounty ? 'put' : 'post';
-            
-            const response = await axios[method](url, {
-                name: formData.name,
-                code: formData.code,
-                population: formData.population || 0,
-                registered_voters: formData.registered_voters || 0,
-                headquarters: formData.headquarters || ''
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            if (response.data.success) {
-                alert(editingCounty ? 'County updated successfully!' : 'County added successfully!');
-                loadCounties();
-                setShowModal(false);
-                setEditingCounty(null);
-                setFormData({ name: '', code: '', population: '', registered_voters: '', headquarters: '' });
-                setError('');
-            }
-        } catch (error) {
-            console.error('Error saving county:', error);
-            setError(error.response?.data?.error || 'Failed to save county');
-        }
+            if (level === 'county')       await axios.delete(`${API}/admin/counties/${id}`, auth());
+            if (level === 'constituency') await axios.delete(`${API}/admin/constituencies/${id}`, auth());
+            if (level === 'ward')         await axios.delete(`${API}/admin/wards/${id}`, auth());
+            msg(`${level} deleted`);
+            if (level === 'county')       loadCounties();
+            if (level === 'constituency') loadConst(drill?.id);
+            if (level === 'ward')         loadWards(subDrill?.id);
+        } catch (e) { msg(e.response?.data?.error || 'Failed', 'err'); }
     };
 
-    const handleEdit = (county) => {
-        setEditingCounty(county);
-        setFormData({
-            name: county.name,
-            code: county.code,
-            population: county.population || '',
-            registered_voters: county.registered_voters || '',
-            headquarters: county.headquarters || ''
-        });
-        setShowModal(true);
-        setError('');
+    const currentLevel = subDrill ? 'ward' : drill ? 'constituency' : 'county';
+    const q = search.toLowerCase();
+
+    const filteredRows = useMemo(() => {
+        const rows = currentLevel === 'county' ? counties : currentLevel === 'constituency' ? constituencies : wards;
+        return q ? rows.filter(r => r.name?.toLowerCase().includes(q) || r.code?.toLowerCase().includes(q)) : rows;
+    }, [counties, constituencies, wards, currentLevel, q]);
+
+    const FIELDS = {
+        county:        [{ key: 'name', label: 'County name', required: true, full: true }, { key: 'code', label: 'Code', required: true }, { key: 'headquarters', label: 'Headquarters' }, { key: 'population', label: 'Population', type: 'number' }],
+        constituency:  [{ key: 'name', label: 'Constituency name', required: true, full: true }, { key: 'code', label: 'Code' }],
+        ward:          [{ key: 'name', label: 'Ward name', required: true, full: true }, { key: 'code', label: 'Code' }],
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this county?')) {
-            try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:5000/api/admin/counties/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                alert('County deleted successfully!');
-                loadCounties();
-            } catch (error) {
-                console.error('Error deleting county:', error);
-                alert(error.response?.data?.error || 'Failed to delete county');
-            }
-        }
+    const TITLES = {
+        county: 'Counties', constituency: `${drill?.name || ''} — Constituencies`, ward: `${subDrill?.name || ''} — Wards`
     };
+    const SUBS = {
+        county: `${counties.length} counties · click a row to see constituencies`,
+        constituency: 'Click a constituency to see its wards',
+        ward: 'Ward-level data'
+    };
+    const ADD_LABELS = { county: 'Add county', constituency: 'Add constituency', ward: 'Add ward' };
 
-    if (loading) {
-        return (
-            <AdminLayout>
-                <div className="admin-loading">Loading counties...</div>
-            </AdminLayout>
-        );
-    }
+    const breadcrumbs = [
+        { label: 'Counties', onClick: () => { setDrill(null); setSubDrill(null); setSearch(''); } },
+        drill    && { label: drill.name,    onClick: () => { setSubDrill(null); setSearch(''); loadConst(drill.id); } },
+        subDrill && { label: subDrill.name, onClick: null },
+    ].filter(Boolean);
+
+    const COLUMNS = {
+        county:       [{ k: 'code', l: 'Code' }, { k: 'name', l: 'County' }, { k: 'headquarters', l: 'HQ' }, { k: 'population', l: 'Population', f: n }, { k: 'registered_voters', l: 'Registered', f: n }, { k: 'constituency_count', l: 'Const.', f: n }],
+        constituency: [{ k: 'code', l: 'Code' }, { k: 'name', l: 'Constituency' }, { k: 'ward_count', l: 'Wards', f: n }],
+        ward:         [{ k: 'code', l: 'Code' }, { k: 'name', l: 'Ward' }],
+    };
 
     return (
         <AdminLayout>
-            <div className="management-page">
-                <div className="page-header">
+            <div className="adm-page">
+                <div className="adm-page-header">
                     <div>
-                        <h2>Counties Management (47 Counties)</h2>
-                        <p>Manage all 47 counties of Kenya</p>
+                        <h1 className="adm-page-title">{TITLES[currentLevel]}</h1>
+                        <p className="adm-page-sub">{SUBS[currentLevel]}</p>
                     </div>
-                    <button className="add-btn" onClick={() => setShowModal(true)}>
-                        + Add New County
+                    <button className="adm-btn primary" onClick={() => setModal({ mode: 'add', level: currentLevel })}>
+                        <Icon name="plus" size={14} /> {ADD_LABELS[currentLevel]}
                     </button>
                 </div>
 
-                {error && (
-                    <div className="error-message" style={{ marginBottom: '20px', padding: '10px', background: '#fee2e2', color: '#dc2626', borderRadius: '8px' }}>
-                        ⚠️ {error}
+                {flash.text && (
+                    <div className={`adm-flash ${flash.type}`}>
+                        <Icon name={flash.type === 'err' ? 'alert' : 'check'} size={14} />
+                        {flash.text}
                     </div>
                 )}
 
-                <div className="data-table-container">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>County Name</th>
-                                <th>Headquarters</th>
-                                <th>Population</th>
-                                <th>Registered Voters</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {counties.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center' }}>No counties found. Please add some.</td>
-                                </tr>
-                            ) : (
-                                counties.map((county) => (
-                                    <tr key={county.id}>
-                                        <td><strong>{county.code}</strong></td>
-                                        <td>{county.name}</td>
-                                        <td>{county.headquarters || '-'}</td>
-                                        <td>{county.population?.toLocaleString() || 0}</td>
-                                        <td>{county.registered_voters?.toLocaleString() || 0}</td>
-                                        <td>
-                                            <button className="edit-btn" onClick={() => handleEdit(county)}>✏️</button>
-                                            <button className="delete-btn" onClick={() => handleDelete(county.id)}>🗑️</button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                {/* Breadcrumb */}
+                {breadcrumbs.length > 1 && (
+                    <div className="adm-breadcrumb">
+                        {breadcrumbs.map((c, i) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <span className="adm-crumb-sep"><Icon name="chevron" size={11} /></span>}
+                                <span className={`adm-crumb ${i === breadcrumbs.length - 1 ? 'active' : ''}`} onClick={c.onClick || undefined}>{c.label}</span>
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
 
-                {showModal && (
-                    <div className="modal-overlay">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h3>{editingCounty ? 'Edit County' : 'Add New County'}</h3>
-                                <button className="close-modal" onClick={() => {
-                                    setShowModal(false);
-                                    setEditingCounty(null);
-                                    setError('');
-                                }}>×</button>
-                            </div>
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-group">
-                                    <label>County Name *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        required
-                                        placeholder="e.g., Nairobi, Mombasa"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>County Code *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.code}
-                                        onChange={(e) => setFormData({...formData, code: e.target.value})}
-                                        required
-                                        placeholder="e.g., 001, 002"
-                                        maxLength="3"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Headquarters</label>
-                                    <input
-                                        type="text"
-                                        value={formData.headquarters}
-                                        onChange={(e) => setFormData({...formData, headquarters: e.target.value})}
-                                        placeholder="e.g., Nairobi City"
-                                    />
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Population</label>
-                                        <input
-                                            type="number"
-                                            value={formData.population}
-                                            onChange={(e) => setFormData({...formData, population: e.target.value})}
-                                            placeholder="Total population"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Registered Voters</label>
-                                        <input
-                                            type="number"
-                                            value={formData.registered_voters}
-                                            onChange={(e) => setFormData({...formData, registered_voters: e.target.value})}
-                                            placeholder="Number of registered voters"
-                                        />
-                                    </div>
-                                </div>
-                                {error && <div className="error-message" style={{ marginBottom: '15px' }}>{error}</div>}
-                                <div className="modal-actions">
-                                    <button type="button" className="cancel-btn" onClick={() => {
-                                        setShowModal(false);
-                                        setEditingCounty(null);
-                                        setError('');
-                                    }}>Cancel</button>
-                                    <button type="submit" className="submit-btn">{editingCounty ? 'Update' : 'Add'}</button>
-                                </div>
-                            </form>
+                {/* Search (county level only) */}
+                {currentLevel === 'county' && (
+                    <div className="adm-filter-row">
+                        <div className="adm-search-box">
+                            <Icon name="search" size={14} className="adm-search-icon" />
+                            <input placeholder="Search counties…" value={search} onChange={e => setSearch(e.target.value)} />
                         </div>
                     </div>
+                )}
+
+                {/* Table */}
+                {loading ? (
+                    <div className="adm-loading"><div className="adm-spinner" /></div>
+                ) : (
+                    <div className="adm-card">
+                        <div className="adm-table-wrap">
+                            <table className="adm-table">
+                                <thead>
+                                    <tr>
+                                        {COLUMNS[currentLevel].map(c => <th key={c.k}>{c.l}</th>)}
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRows.length === 0 && (
+                                        <tr><td colSpan={COLUMNS[currentLevel].length + 1} style={{ textAlign: 'center', padding: 32, color: 'var(--t4)' }}>No records found</td></tr>
+                                    )}
+                                    {filteredRows.map(row => (
+                                        <tr key={row.id}
+                                            style={{ cursor: currentLevel !== 'ward' ? 'pointer' : 'default' }}
+                                            onClick={currentLevel === 'county' ? () => handleCountyClick(row) : currentLevel === 'constituency' ? () => handleConstClick(row) : undefined}>
+                                            {COLUMNS[currentLevel].map(c => (
+                                                <td key={c.k} style={c.k === 'code' ? { fontFamily: 'monospace', fontSize: 11, color: 'var(--t3)' } : {}}>
+                                                    {c.f ? c.f(row[c.k]) : (row[c.k] ?? '—')}
+                                                </td>
+                                            ))}
+                                            <td>
+                                                <div className="row-actions">
+                                                    <button className="adm-btn ghost icon"
+                                                        onClick={e => { e.stopPropagation(); setModal({ mode: 'edit', level: currentLevel, data: row }); }}>
+                                                        <Icon name="edit" size={13} />
+                                                    </button>
+                                                    <button className="adm-btn ghost icon"
+                                                        style={{ color: 'var(--r)' }}
+                                                        onClick={e => { e.stopPropagation(); handleDelete(currentLevel, row.id, row.name); }}>
+                                                        <Icon name="trash" size={13} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal */}
+                {modal && (
+                    <GeoModal
+                        title={`${modal.mode === 'edit' ? 'Edit' : 'Add'} ${modal.level}`}
+                        fields={FIELDS[modal.level]}
+                        onClose={() => setModal(null)}
+                        onSubmit={handleSave}
+                        submitting={sub}
+                        initial={modal.data || {}}
+                    />
                 )}
             </div>
         </AdminLayout>

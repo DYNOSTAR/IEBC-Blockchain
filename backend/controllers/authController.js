@@ -187,10 +187,11 @@ const voterLogin = async (req, res) => {
 
     try {
         const query = `
-            SELECT 
+            SELECT
                 u.id as user_id, u.first_name, u.last_name, u.email,
-                u.password, u.role, u.is_active,
-                v.id as voter_id, v.national_id, v.polling_station_id,
+                COALESCE(u.password_hash, u.password) as password,
+                u.role, u.is_active,
+                v.id as voter_id, v.national_id,
                 v.has_voted, v.county_id,
                 c.name as county_name
             FROM voters v
@@ -261,8 +262,8 @@ const adminLogin = async (req, res) => {
 
     try {
         const query = `
-            SELECT * FROM users 
-            WHERE email = $1 AND role IN ('admin', 'iebc_official')
+            SELECT * FROM users
+            WHERE email = $1 AND role IN ('admin', 'super_admin', 'iebc_official')
         `;
         const result = await pool.query(query, [email]);
 
@@ -276,7 +277,9 @@ const adminLogin = async (req, res) => {
             return res.status(401).json({ success: false, error: 'Your account has been deactivated.' });
         }
 
-        const passwordMatch = await bcrypt.compare(password, admin.password);
+        // Support both password_hash (existing DB) and password (new schema)
+        const storedHash = admin.password_hash || admin.password;
+        const passwordMatch = await bcrypt.compare(password, storedHash);
         if (!passwordMatch) {
             return res.status(401).json({ success: false, error: 'Invalid email or password.' });
         }

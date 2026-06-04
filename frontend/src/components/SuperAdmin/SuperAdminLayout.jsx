@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SuperAdminSidebar from './SuperAdminSidebar';
 import SuperAdminHeader from './SuperAdminHeader';
+import '../../styles/super-admin.css';
 
 const SuperAdminLayout = ({ children }) => {
     const navigate = useNavigate();
@@ -32,7 +33,12 @@ const SuperAdminLayout = ({ children }) => {
     };
 
     if (!admin) {
-        return <div className="admin-loading">Loading Super Admin Portal...</div>;
+        return (
+            <div className="sa-loading" style={{ minHeight: '100vh', background: '#0f1215', color: '#fff' }}>
+                <div className="sa-spin">⛓️</div>
+                <p>Loading Super Admin Portal…</p>
+            </div>
+        );
     }
 
     return (

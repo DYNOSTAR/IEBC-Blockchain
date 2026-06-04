@@ -1,62 +1,98 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../../styles/admin-sidebar.css';
+import Icon from '../shared/Icon';
+import '../../styles/admin.css';
+
+const GROUPS = [
+    {
+        label: 'Overview',
+        items: [
+            { path: '/admin/dashboard', icon: 'dashboard', label: 'Dashboard' },
+            { path: '/admin/profile',   icon: 'profile',   label: 'My Profile' },
+        ]
+    },
+    {
+        label: 'Elections',
+        items: [
+            { path: '/admin/reports', icon: 'election', label: 'Elections' },
+            { path: '/admin/results', icon: 'results',  label: 'Live Results', live: true },
+        ]
+    },
+    {
+        label: 'Geography',
+        items: [
+            { path: '/admin/counties',       icon: 'county',       label: 'Counties',       count: '47' },
+            { path: '/admin/constituencies', icon: 'constituency', label: 'Constituencies', count: '290' },
+            { path: '/admin/wards',          icon: 'ward',         label: 'Wards' },
+        ]
+    },
+    {
+        label: 'People',
+        items: [
+            { path: '/admin/parties',    icon: 'party',      label: 'Political Parties' },
+            { path: '/admin/candidates', icon: 'candidates', label: 'Candidates' },
+            { path: '/admin/voters',     icon: 'users',      label: 'Voters' },
+        ]
+    },
+    {
+        label: 'System',
+        items: [
+            { path: '/admin/audit-logs', icon: 'logs', label: 'Audit Logs' },
+        ]
+    }
+];
 
 const AdminSidebar = ({ collapsed }) => {
-    const navigate = useNavigate();
-    const location = useLocation();
-
-    const menuItems = [
-        { path: '/admin/dashboard', icon: '📊', label: 'Dashboard' },
-        { path: '/admin/profile', icon: '👤', label: 'My Profile' },
-        { path: '/admin/counties', icon: '🗺️', label: 'Counties (47)' },
-        { path: '/admin/constituencies', icon: '📍', label: 'Constituencies (290)' },
-        { path: '/admin/wards', icon: '🏘️', label: 'Wards' },
-        { path: '/admin/polling-stations', icon: '🏢', label: 'Polling Stations' },
-        { path: '/admin/parties', icon: '🎭', label: 'Political Parties' },
-        { path: '/admin/candidates', icon: '👥', label: 'Candidates' },
-        { path: '/admin/elections', icon: '📅', label: 'Elections' },
-        { path: '/admin/results',   icon: '📊', label: 'Results' },
-        { path: '/admin/voters', icon: '👤', label: 'Voters Data' },
-        { path: '/admin/reports', icon: '⚠️', label: 'Reports' },
-        { path: '/admin/audit-logs', icon: '📋', label: 'Audit Logs' }
-    ];
+    const navigate     = useNavigate();
+    const { pathname } = useLocation();
 
     return (
-        <div className={`admin-sidebar ${collapsed ? 'collapsed' : ''}`}>
-            <div className="sidebar-logo">
-                <div className="logo-icon">🗳️</div>
-                {!collapsed && (
-                    <div className="logo-text">
-                        <span className="logo-title">IEBC</span>
-                        <span className="logo-subtitle">Admin Portal</span>
-                    </div>
-                )}
+        <div className={`adm-sidebar ${collapsed ? 'collapsed' : ''}`}>
+            {/* Flag stripe */}
+            <div className="flag-stripe" />
+
+            {/* Logo */}
+            <div className="adm-sidebar-logo">
+                <div className="adm-sidebar-logo-icon">
+                    <Icon name="election" size={16} color="#fff" />
+                </div>
+                <div className="adm-sidebar-logo-text">
+                    <span className="adm-sidebar-logo-name">IEBC Admin</span>
+                    <span className="adm-sidebar-logo-sub">Admin Portal</span>
+                </div>
             </div>
-            
-            <nav className="sidebar-nav">
-                {menuItems.map((item) => (
-                    <button
-                        key={item.path}
-                        onClick={() => navigate(item.path)}
-                        className={`sidebar-menu-item ${location.pathname === item.path ? 'active' : ''}`}
-                    >
-                        <span className="menu-icon">{item.icon}</span>
-                        {!collapsed && <span className="menu-label">{item.label}</span>}
-                        {location.pathname === item.path && <span className="menu-indicator"></span>}
-                    </button>
+
+            {/* Navigation */}
+            <nav className="adm-sidebar-nav">
+                {GROUPS.map((group, gi) => (
+                    <div key={gi} className="adm-sidebar-group">
+                        {gi > 0 && <div className="adm-sidebar-divider" />}
+                        <div className="adm-sidebar-group-label">{group.label}</div>
+                        {group.items.map(item => (
+                            <button
+                                key={item.path}
+                                onClick={() => navigate(item.path)}
+                                className={`adm-nav-item ${pathname === item.path ? 'active' : ''}`}
+                                title={collapsed ? item.label : undefined}
+                            >
+                                <Icon name={item.icon} size={15} className="adm-nav-icon" />
+                                <span className="adm-nav-label">{item.label}</span>
+                                {item.count && <span className="adm-nav-count">{item.count}</span>}
+                                {item.live  && <span className="adm-nav-live" title="Live" />}
+                            </button>
+                        ))}
+                    </div>
                 ))}
             </nav>
-            
-            {!collapsed && (
-                <div className="sidebar-footer">
-                    <div className="system-status">
-                        <span className="status-dot"></span>
-                        System Online
-                    </div>
-                    <div className="election-year">Election 2027</div>
+
+            {/* Footer */}
+            <div className="adm-sidebar-footer">
+                <div className="adm-sidebar-status">
+                    <div className="adm-sidebar-status-dot" />
+                    <span className="adm-sidebar-status-text">System Online</span>
                 </div>
-            )}
+                <div className="adm-sidebar-version">IEBC Kenya · Admin Portal</div>
+            </div>
         </div>
     );
 };

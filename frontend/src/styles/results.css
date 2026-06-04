@@ -604,6 +604,67 @@
   display: inline-block;
 }
 
+/* ── Election locked banner ── */
+.election-locked-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff3cd;
+  border: 2px solid #CE1126;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  color: #6b1a23;
+}
+
+/* ── Section labels ── */
+.section-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label-national {
+  background: linear-gradient(90deg, #003d24, #006B3F);
+  color: #fff;
+}
+.section-label-local {
+  background: linear-gradient(90deg, #8a000a, #CE1126);
+  color: #fff;
+  margin-top: 10px;
+}
+
+/* ── Location empty prompt ── */
+.location-empty-prompt {
+  background: #fff;
+  border-radius: var(--border-r);
+  box-shadow: var(--shadow-sm);
+  padding: 36px 24px;
+  text-align: center;
+  margin-bottom: 20px;
+  border: 2px dashed #ddd;
+}
+.loc-prompt-icon  { font-size: 2.4rem; margin-bottom: 10px; }
+.loc-prompt-title { font-size: 1rem; font-weight: 700; color: #333; margin-bottom: 8px; }
+.loc-prompt-sub   { font-size: 0.84rem; color: #888; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+/* ── Drill-down hint ── */
+.drill-hint {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  color: #5d4037;
+  margin-bottom: 16px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .results-page-head   { flex-direction: column; }

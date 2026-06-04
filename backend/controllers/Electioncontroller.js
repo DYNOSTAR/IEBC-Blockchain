@@ -73,11 +73,11 @@ async function getPositionsWithCandidates(electionId, location = {}) {
                     AND (
                         p.level = 'national'
                         OR (p.level = 'county'
-                            AND ($2::int IS NULL OR c.county_id IS NULL OR c.county_id = $2::int))
+                            AND ($2::int IS NULL OR c.county_id = $2::int))
                         OR (p.level = 'constituency'
-                            AND ($3::int IS NULL OR c.constituency_id IS NULL OR c.constituency_id = $3::int))
+                            AND ($3::int IS NULL OR c.constituency_id = $3::int))
                         OR (p.level = 'ward'
-                            AND ($4::int IS NULL OR c.ward_id IS NULL OR c.ward_id = $4::int))
+                            AND ($4::int IS NULL OR c.ward_id = $4::int))
                     )
                 ),
                 '[]'
@@ -143,9 +143,11 @@ const updateElectionStatus = async (req, res) => {
     }
     try {
         const result = await pool.query(
-            `UPDATE elections SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+            `UPDATE elections SET status = $1 WHERE id = $2 RETURNING *`,
             [status, id]
         );
+        // Update updated_at if column exists (safe to ignore if column absent)
+        pool.query(`UPDATE elections SET updated_at = NOW() WHERE id = $1`, [id]).catch(() => {});
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Election not found.' });
         }
